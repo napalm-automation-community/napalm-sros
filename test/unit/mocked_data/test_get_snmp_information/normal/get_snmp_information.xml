@@ -1,0 +1,15 @@
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
+        <system>
+            <name>nokia01.sfo07</name>
+            <security>
+                <snmp>
+                    \<community>
+                        <community-string>76HzdddhlPpRo1Vql+ZB5spLqccgYQ== hash2</community-string>
+                        <access-permissions>r</access-permissions>
+                    </community>
+                </snmp>
+            </security>
+        </system>
+    </configure>
+</data>

@@ -1,0 +1,20 @@
+{
+    "esat-1/1/1": {
+        "mac_address": "d0:99:d5:d8:50:43",
+        "is_up": true,
+        "speed": 10000,
+        "last_flapped": -1.0,
+        "is_enabled": true,
+        "mtu": 9208,
+        "description": "1-Gig/10-Gig Ethernet"
+    },
+    "system": {
+        "mac_address": "a4:92:cb:aa:0e:69",
+        "is_up": true,
+        "last_flapped": 1586818407.0,
+        "mtu": 1500,
+        "description": "",
+        "is_enabled": true,
+        "speed": -1
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "1/1/c1/1": [
+        {
+            "parent_interface": "",
+            "remote_chassis_id": "D0:99:D5:D8:50:41",
+            "remote_system_name": "esat-1",
+            "remote_port": "35700737",
+            "remote_port_description": "1/1/c1/1, 100-Gig Ethernet",
+            "remote_system_description": "",
+            "remote_system_capab": [],
+            "remote_system_enable_capab": []
+        }
+    ],
+    "1/1/c5/1": [
+        {
+            "parent_interface": "",
+            "remote_chassis_id": "D0:99:D5:D8:48:41",
+            "remote_system_name": "esat-2",
+            "remote_port": "35700737",
+            "remote_port_description": "1/1/c1/1, 100-Gig Ethernet",
+            "remote_system_description": "",
+            "remote_system_capab": [],
+            "remote_system_enable_capab": []
+        }
+    ]
+}

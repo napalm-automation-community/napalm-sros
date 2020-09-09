@@ -1,0 +1,5 @@
+[]
+A:netconf@nokia01.sfo07# environment more false
+
+[]
+A:netconf@nokia01.sfo07#

@@ -1,0 +1,28 @@
+[
+    {
+        "referenceid": "GPS",
+        "synchronized": true,
+        "stratum": 1,
+        "type": "srvr",
+        "hostpoll": 64,
+        "offset": 0.024,
+        "remote": "135.3.26.240",
+        "when": "",
+        "reachability": -1,
+        "delay": -1.0,
+        "jitter": -1.0
+    },
+    {
+        "referenceid": "138.120.181.55",
+        "synchronized": false,
+        "stratum": 3,
+        "type": "actpr",
+        "hostpoll": 64,
+        "offset": 0.07,
+        "remote": "135.121.242.172",
+        "when": "",
+        "reachability": -1,
+        "delay": -1.0,
+        "jitter": -1.0
+    }
+]

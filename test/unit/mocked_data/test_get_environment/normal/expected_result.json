@@ -1,0 +1,59 @@
+{
+    "fans": {
+        "1": {
+            "status": true
+        },
+        "2": {
+            "status": true
+        }
+    },
+    "power": {
+        "1": {
+            "status": true,
+            "capacity": 4400.0,
+            "output": 329.835
+        },
+        "3": {
+            "status": false,
+            "capacity": 0.0,
+            "output": 329.835
+        },
+        "4": {
+            "status": false,
+            "capacity": 0.0,
+            "output": 329.835
+        }
+    },
+    "temperature": {
+        "cpm": {
+            "temperature": 62.0,
+            "is_alert": false,
+            "is_critical": false
+        },
+        "card": {
+            "temperature": 62.0,
+            "is_alert": false,
+            "is_critical": false
+        },
+        "mda": {
+            "temperature": 49.0,
+            "is_alert": false,
+            "is_critical": false
+        }
+    },
+    "memory": {
+        "available_ram": 29158801408,
+        "used_ram": 3856443792
+    },
+    "cpu": {
+        "1": {
+            "%usage": 9.45
+        },
+        "60": {
+            "%usage": 9.22
+        },
+        "300": {
+            "%usage": 9.21
+        }
+    }
+}

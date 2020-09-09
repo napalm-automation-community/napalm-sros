@@ -1,0 +1,32 @@
+{
+    "global": {
+        "router_id": "1.1.1.1",
+        "peers": {
+            "1.1.0.1": {
+                "remote_id": "0.0.0.0",
+                "is_enabled": true,
+                "is_up": false,
+                "uptime": 1199816,
+                "address_family": {
+                    "ipv4": {
+                        "sent_prefixes": 0,
+                        "received_prefixes": 0,
+                        "accepted_prefixes": 0
+                    },
+                    "ipv6": {
+                        "sent_prefixes": 0,
+                        "received_prefixes": 0,
+                        "accepted_prefixes": 0
+                    }
+                },
+                "description": "",
+                "local_as": 65000,
+                "remote_as": 65101
+            }
+        }
+    },
+    "2100": {
+        "router_id": "1.1.1.1",
+        "peers": {}
+    }
+}

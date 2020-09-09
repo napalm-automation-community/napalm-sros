@@ -1,0 +1,58 @@
+{
+    "eBGP-Peers": {
+        "apply_groups": [],
+        "description": "",
+        "local_as": 65000,
+        "type": "external",
+        "import_policy": "eBGP-import",
+        "export_policy": "",
+        "local_address": "",
+        "multipath": false,
+        "multihop_ttl": -1,
+        "remote_as": 0,
+        "remove_private_as": false,
+        "prefix_limit": {},
+        "neighbors": {
+            "1.1.0.1": {
+              "description": "",
+              "remote_as": 65101,
+              "prefix_limit": {},
+              "import_policy": "",
+              "export_policy": "",
+              "local_address": "",
+              "local_as": 65000,
+              "authentication_key": "",
+              "nhs": false,
+              "route_reflector_client": false
+            }
+        }
+    },
+    "iBGP-Peers": {
+        "apply_groups": [],
+        "description": "",
+        "local_as": 65000,
+        "type": "internal",
+        "import_policy": "add-comm-ibgp",
+        "export_policy": "",
+        "local_address": "",
+        "multipath": false,
+        "multihop_ttl": -1,
+        "remote_as": 65000,
+        "remove_private_as": false,
+        "prefix_limit": {},
+        "neighbors": {
+            "2.1.0.1": {
+                "description": "",
+                "remote_as": 65000,
+                "prefix_limit": {},
+                "import_policy": "",
+                "export_policy": "",
+                "local_address": "",
+                "local_as": 65000,
+                "authentication_key": "",
+                "nhs": false,
+                "route_reflector_client": false
+            }
+        }
+    }
+}
