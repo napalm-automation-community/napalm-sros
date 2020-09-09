@@ -1,0 +1,43 @@
+{
+    "Base": {
+        "65101": [
+            {
+                "local_address": "",
+                "local_address_configured": true,
+                "local_as": 65000,
+                "remote_as": 65101,
+                "local_as_prepend": true,
+                "multihop": false,
+                "multipath": false,
+                "suppress_4byte_as": true,
+                "keepalive": -1,
+                "remove_private_as": false,
+                "holdtime": -1,
+                "configured_holdtime": 0,
+                "import_policy": "",
+                "export_policy": "",
+                "routing_table": "",
+                "router_id": "1.1.1.1",
+                "up": false,
+                "connection_state": "Connect",
+                "previous_connection_state": "Active",
+                "last_event": "openFail",
+                "local_port": 50171,
+                "remote_port": 179,
+                "remote_address": "0.0.0.0",
+                "configured_keepalive": 0,
+                "flap_count": 0,
+                "input_messages": 0,
+                "output_messages": 28827,
+                "input_updates": 0,
+                "output_updates": 0,
+                "messages_queued_out": 0,
+                "active_prefix_count": 0,
+                "suppressed_prefix_count": 0,
+                "advertised_prefix_count": 0,
+                "received_prefix_count": 0,
+                "accepted_prefix_count": -1
+            }
+        ]
+    }
+}

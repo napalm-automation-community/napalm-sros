@@ -1,0 +1,14 @@
+{
+    "vendor": "Nokia",
+    "model": "7750 SR-1s",
+    "serial_number": "NS1921F1814",
+    "os_version": "B-19.10.R4",
+    "hostname": "nokia01.sfo07",
+    "fqdn": "nokia01.sfo07",
+    "uptime": 3802044,
+    "interface_list": [
+        "system",
+        "to_RTR-01",
+        "management"
+    ]
+}

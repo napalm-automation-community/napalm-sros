@@ -1,0 +1,30 @@
+{
+    "esat-1/1/1": {
+        "tx_errors": 0,
+        "rx_errors": 0,
+        "tx_discards": 0,
+        "rx_discards": 0,
+        "tx_octets": 277514919156,
+        "rx_octets": 26992652217760,
+        "tx_unicast_packets": 183541701,
+        "rx_unicast_packets": 17852283270,
+        "tx_multicast_packets": 7,
+        "rx_multicast_packets": 0,
+        "tx_broadcast_packets": 255,
+        "rx_broadcast_packets": 161
+    },
+    "system": {
+        "tx_errors": -1,
+        "rx_errors": -1,
+        "tx_discards": 0,
+        "rx_discards": -1,
+        "tx_octets": 0,
+        "rx_octets": 0,
+        "tx_unicast_packets": -1,
+        "rx_unicast_packets": -1,
+        "tx_multicast_packets": -1,
+        "rx_multicast_packets": -1,
+        "tx_broadcast_packets": -1,
+        "rx_broadcast_packets": -1
+    }
+}

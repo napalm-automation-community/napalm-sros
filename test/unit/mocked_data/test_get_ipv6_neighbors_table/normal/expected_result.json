@@ -1,0 +1,9 @@
+[
+  {
+    "ip": "::ac10:1702",
+    "interface": "to_vSR-AUTO-02-V6",
+    "mac": "52:54:00:fe:b8:f0",
+    "state": "reachable",
+    "age": 3.0
+  }
+]

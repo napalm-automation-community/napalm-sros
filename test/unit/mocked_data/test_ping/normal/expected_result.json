@@ -1,0 +1,33 @@
+{
+    "success": {
+        "probes_sent": 5,
+        "packet_loss": 0,
+        "rtt_min": 0.1,
+        "rtt_avg": 0.112,
+        "rtt_max": 0.124,
+        "rtt_stddev": 0.007,
+        "results": [
+        {
+            "ip_address": "8.8.8.8",
+            "rtt": 0.124
+        },
+        {
+            "ip_address": "8.8.8.8",
+            "rtt": 0.112
+        },
+        {
+            "ip_address": "8.8.8.8",
+            "rtt": 0.1
+        },
+        {
+            "ip_address": "8.8.8.8",
+            "rtt": 0.112
+        },
+        {
+            "ip_address": "8.8.8.8",
+            "rtt": 0.116
+        }
+    ]
+    }
+
+}

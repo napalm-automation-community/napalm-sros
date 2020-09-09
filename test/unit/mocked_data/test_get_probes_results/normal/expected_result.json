@@ -1,0 +1,22 @@
+{
+    "TiMOS CLI": {
+        "2": {
+            "probe_type": "icmp-ping",
+            "target": "192.168.2.1",
+            "source": "",
+            "probe_count": 10,
+            "rtt": 0.0,
+            "round_trip_jitter": 0.0,
+            "last_test_loss": 0,
+            "current_test_min_delay": 0.0,
+            "current_test_max_delay": 0.0,
+            "current_test_avg_delay": 0.0,
+            "last_test_min_delay": 0.0,
+            "last_test_max_delay": 0.0,
+            "last_test_avg_delay": 0.0,
+            "global_test_min_delay": -1.0,
+            "global_test_max_delay": -1.0,
+            "global_test_avg_delay": -1.0
+        }
+    }
+}

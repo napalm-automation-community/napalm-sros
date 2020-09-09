@@ -1,0 +1,28 @@
+{
+    "Base": {
+        "type": "DEFAULT_INSTANCE",
+        "name": "Base",
+        "state": {
+            "route_distinguisher": ""
+        },
+        "interfaces": {
+            "interface": {
+                "system": {},
+                "to_RTR-01": {}
+            }
+        }
+    },
+    "2100": {
+        "type": "L3VRF",
+        "name": "2100",
+        "state": {
+            "route_distinguisher": "65000:2100"
+        },
+        "interfaces": {
+            "interface": {
+                "to_VPLS-2000": {},
+                "to_Network": {}
+            }
+        }
+    }
+}

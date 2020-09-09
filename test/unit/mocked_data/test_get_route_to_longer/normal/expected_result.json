@@ -1,0 +1,40 @@
+{
+  "1.0.4.0/24": [
+    {
+      "routing_table": "Base",
+      "protocol": "bgp",
+      "last_active": false,
+      "inactive_reason": "",
+      "age": 211140,
+      "preference": 170,
+      "next_hop": "2.1.0.1",
+      "selected_next_hop": true,
+      "current_active": false,
+      "outgoing_interface": "to_RTR-01",
+      "protocol_attributes":
+      {
+        "metric": 0,
+        "metric2": -1,
+        "preference2": 170
+      }
+    },
+    {
+      "routing_table": "Base",
+      "protocol": "bgp",
+      "next_hop": "2.2.0.1",
+      "age": 211140,
+      "preference": 170,
+      "last_active": false,
+      "inactive_reason": "",
+      "selected_next_hop": true,
+      "current_active": false,
+      "outgoing_interface": "to_RTR-02",
+      "protocol_attributes":
+      {
+        "metric": 0,
+        "metric2": -1,
+        "preference2": 170
+      }
+    }
+  ]
+}

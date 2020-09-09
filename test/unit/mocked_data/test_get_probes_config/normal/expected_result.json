@@ -1,0 +1,11 @@
+{
+    "TiMOS CLI": {
+        "MYPROBE": {
+            "probe_type": "icmp-ping",
+            "target": "62.115.50.51",
+            "source": "198.41.132.35",
+            "probe_count": 15,
+            "test_interval": -1
+        }
+    }
+}

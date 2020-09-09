@@ -1,0 +1,36 @@
+{
+    "esat-1/1/1": {
+        "physical_channels": {
+            "channel": []
+        }
+    },
+    "1/1/c1": {
+        "physical_channels": {
+            "channel": [
+                {
+                    "index": 1,
+                    "state": {
+                        "input_power": {
+                            "instant": -0.04,
+                            "avg": -1.0,
+                            "min": -1.0,
+                            "max": -1.0
+                        },
+                        "output_power": {
+                            "instant": 2.72,
+                            "avg": -1.0,
+                            "min": -1.0,
+                            "max": -1.0
+                        },
+                        "laser_bias_current": {
+                            "instant": 38.5,
+                            "avg": -1.0,
+                            "min": -1.0,
+                            "max": -1.0
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

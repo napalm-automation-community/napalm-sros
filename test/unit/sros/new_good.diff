@@ -1,0 +1,19 @@
+configure {
+        router "Base" {
+            interface "system" {
++               description "This is a system interface"
+            }
+        }
+        system {
+            security {
+                user-params {
+                    local-user {
+                        user "netconf" {
+-                           password "$2y$10$yW.0TywKMC4FIW5iixEVU./KDrssnQKVTHE.Aogbdoo04.uImDl.K"
++                           password "$2y$10$.pTeMylttsq5ZMOnGDaag.uebq7NpYKo9Cgwi/O5covuBNyvSDHSW"
+                        }
+                    }
+                }
+            }
+        }
+    }

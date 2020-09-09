@@ -1,0 +1,38 @@
+[
+    {
+        "mac": "a4:92:cb:aa:15:76",
+        "interface": "cpm",
+        "vlan": -1,
+        "static": false,
+        "active": false,
+        "moves": -1,
+        "last_move": -1.0
+    },
+    {
+        "mac": "a4:92:cb:b2:0d:d1",
+        "interface": "cpm",
+        "vlan": -1,
+        "static": false,
+        "active": false,
+        "moves": -1,
+        "last_move": -1.0
+    },
+    {
+        "mac": "d0:99:d5:d8:48:41",
+        "interface": "sap:1/1/c5/1",
+        "vlan": 0,
+        "static": false,
+        "active": false,
+        "moves": -1,
+        "last_move": -1.0
+    },
+    {
+        "mac": "d0:99:d5:d8:50:41",
+        "interface": "sap:1/1/c1/1",
+        "vlan": 0,
+        "static": false,
+        "active": false,
+        "moves": -1,
+        "last_move": -1.0
+    }
+]
