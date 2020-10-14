@@ -53,12 +53,13 @@ from napalm_sros.nc_filters import *
 class NokiaSROSDriver(NetworkDriver):
     """Napalm driver for Skeleton."""
 
-    def __init__(self, hostname, username, password, timeout=60, optional_args=None):
+    def __init__(self, hostname, username, password, key_filename, timeout=60, optional_args=None):
         """Constructor."""
         self.manager = None
         self.hostname = hostname
         self.username = username
         self.password = password
+        self.key_filename = key_filename
         self.timeout = timeout
         self.conn = None
         self.conn_ssh = None
@@ -94,6 +95,7 @@ class NokiaSROSDriver(NetworkDriver):
                     port=self.port,
                     username=self.username,
                     password=self.password,
+                    key_filename=self.key_filename,
                     hostkey_verify=False,
                     timeout=self.timeout,
                 )
