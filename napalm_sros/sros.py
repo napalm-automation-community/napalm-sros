@@ -366,7 +366,7 @@ class NokiaSROSDriver(NetworkDriver):
                                       default_operation="replace")
                 self.conn.validate(source="candidate")
             else:
-                configuration = configuration.split(" \n ")
+                configuration = configuration.split("\n")
                 configuration.insert(0, "edit-config exclusive")
                 configuration.insert(1, "delete configure")
                 buff = self._perform_cli_commands(configuration)
@@ -950,10 +950,10 @@ class NokiaSROSDriver(NetworkDriver):
                     continue
                 if "[]" in item:
                     continue
-                elif cmd_line_pattern.search(item):
+                elif cmd_line_pattern.search(item) or not row:
                     continue
                 else:
-                    new_buff += row
+                    new_buff += row + "\n"
             return new_buff
 
         if retrieve == "running":
