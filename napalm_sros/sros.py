@@ -332,7 +332,7 @@ class NokiaSROSDriver(NetworkDriver):
                 if buff is not None:
                     for item in buff.split("\n"):
                         if "MINOR: " in item:
-                            raise MergeConfigException()
+                            raise MergeConfigException('Merge issue: %s' % item)
 
         except MergeConfigException as me:
             raise MergeConfigException(me)
@@ -373,7 +373,7 @@ class NokiaSROSDriver(NetworkDriver):
                 if buff is not None:
                     for item in buff.split("\n"):
                         if "MINOR" in item:
-                            raise ReplaceConfigException()
+                            raise ReplaceConfigException('Replace issue: %s' % item)
         except ReplaceConfigException as rex:
             raise ReplaceConfigException(rex)
 
