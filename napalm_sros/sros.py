@@ -105,6 +105,7 @@ class NokiaSROSDriver(NetworkDriver):
     def close(self):
         """Implement the NAPALM method close (mandatory)"""
         # Close the NETCONF connection with the host
+        self.conn_ssh.close()
         self.conn.close_session()
 
     def _create_ssh(self):
@@ -932,7 +933,7 @@ class NokiaSROSDriver(NetworkDriver):
         # Getting output in MD-CLI format
         # retrieving config using md-cli
         cmd_running = "admin show configuration | no-more"
-        cmd_candidate = ["configure global", "info | no-more"]
+        cmd_candidate = ["edit-config read-only", "info | no-more", "quit-config"]
 
         # helper method
         def _update_buff(buff, cmd):
@@ -942,16 +943,20 @@ class NokiaSROSDriver(NetworkDriver):
             else:
                 updated_buff = [buff]
             new_buff = ""
-            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#\s")
-            match_strings = ["Entering global", "[gl:configure]", cmd_candidate[0]]
+            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
+            match_strings = ["Entering global", "[gl:configure]", cmd_candidate[0], cmd_running]
             for item in updated_buff[0].split("\n"):
                 row = item.rstrip()
                 if any(match in item for match in match_strings):
                     continue
                 if "[]" in item:
                     continue
+                elif "configure" in item:
+                    new_buff += "configure{" + "\n"
                 elif cmd_line_pattern.search(item) or not row:
                     continue
+                elif "persistent-indices" in item:
+                    break
                 else:
                     new_buff += row + "\n"
             return new_buff
