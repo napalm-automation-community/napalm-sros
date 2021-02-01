@@ -43,7 +43,7 @@ import napalm.base.constants as C
 
 # import third party libraries
 from ncclient import manager
-from ncclient.xml_ import to_ele
+from ncclient.xml_ import to_ele, to_xml
 
 # import local modules
 from napalm_sros.utils.parse_output_to_dict import parse_with_textfsm
@@ -65,6 +65,16 @@ class NokiaSROSDriver(NetworkDriver):
         self.ssh_channel = None
         self.fmt = None
         self.locked = False
+        self.terminal_stdout_re = [
+            re.compile(
+                "[\r\n]*\!?\*?(\((ex|gl|pr|ro)\))?\[.*\][\r\n]+[ABCD]\:\S+\@\S+\#\s$"
+            ),
+            re.compile("[\r\n]*\*?[ABCD]:[\w\-\.\,\>]+[#\$]\s"),
+        ]
+        self.terminal_stderr_re = [
+            re.compile("Error: .*[\r\n]+"),
+            re.compile("(MINOR|MAJOR|CRITICAL): .*[\r\n]+"),
+        ]
 
         if optional_args is None:
             optional_args = {}
@@ -106,7 +116,8 @@ class NokiaSROSDriver(NetworkDriver):
         """Implement the NAPALM method close (mandatory)"""
         # Close the NETCONF connection with the host
 
-        self.conn_ssh.close()
+        if self.conn_ssh is not None:
+            self.conn_ssh.close()
         self.conn.close_session()
 
     def _create_ssh(self):
@@ -120,23 +131,63 @@ class NokiaSROSDriver(NetworkDriver):
         )
         self.ssh_channel = self.conn_ssh.invoke_shell()
 
-    def _perform_cli_commands(self, commands):
+    def _perform_cli_commands(self, commands, is_get):
         is_alive = False
         if self.conn_ssh is not None:
             is_alive = self.conn_ssh.get_transport().is_active()
         if not is_alive:
             self._create_ssh()
         buff = ""
-        for c in commands:
-            if "\n" not in c:
-                c = c + "\n"
-            self.ssh_channel.send(c)
-            while True:
-                time.sleep(0.250)
-                resp = self.ssh_channel.recv(9999)
+        if is_get:
+            for command in commands:
+                if "\n" not in command:
+                    command = command + "\n"
+                self.ssh_channel.send(command)
+                while True:
+                    time.sleep(0.150)
+                    resp = self.ssh_channel.recv(9999)
+                    buff += resp.decode("ascii")
+                    if re.search(self.terminal_stdout_re[0], buff):
+                        break
+        else:
+            # chunk commands into lists of length 500
+            # send all the 500 commands together
+            # receive the output from the router
+            # the last while loop is to ensure that we have received all the output from the router for the remaining commands
+
+            command_list = []
+            if len(commands) > 500:
+                n = 500
+                command_list = [
+                    commands[i * n : (i + 1) * n]
+                    for i in range((len(commands) + n - 1) // n)
+                ]
+            else:
+                n = len(commands)
+                command_list = [
+                    commands[i * n : (i + 1) * n]
+                    for i in range((len(commands) + n - 1) // n)
+                ]
+            if len(command_list) == 0:
+                pass
+            for command_set in command_list:
+                for command in command_set:
+                    if "\n" not in command:
+                        command = command + "\n"
+                    if self.ssh_channel.send_ready():
+                        self.ssh_channel.send(command)
+                time.sleep(0.1)
+                while self.ssh_channel.recv_ready():
+                    time.sleep(0.1)
+                    resp = self.ssh_channel.recv(999)
+                    buff += resp.decode("ascii")
+
+            time.sleep(1.0)
+            while self.ssh_channel.recv_ready():
+                time.sleep(0.1)
+                resp = self.ssh_channel.recv(999)
                 buff += resp.decode("ascii")
-                if buff.endswith("# "):
-                    break
+
         return buff
 
     def _lock_config(self):
@@ -200,7 +251,7 @@ class NokiaSROSDriver(NetworkDriver):
         SSH session is still open etc.
         """
         is_alive_dict = {}
-        self._perform_cli_commands(["environment more false"])
+        self._perform_cli_commands(["environment more false"], True)
         if self.conn_ssh is not None:
             is_alive_dict.update({"is_alive": True})
         else:
@@ -214,7 +265,7 @@ class NokiaSROSDriver(NetworkDriver):
         if self.fmt == "xml":
             self.conn.discard_changes()
         else:
-            self._perform_cli_commands(["discard"])
+            self._perform_cli_commands(["discard"], True)
         if not self.lock_disable and not self.session_config_lock:
             self._unlock_config()
 
@@ -223,14 +274,14 @@ class NokiaSROSDriver(NetworkDriver):
         Commits the changes requested by the method load_replace_candidate or load_merge_candidate.
         """
         if self.fmt == "text":
-            buff = self._perform_cli_commands(["commit"])
+            buff = self._perform_cli_commands(["commit"], True)
             # If error while performing commit, return the error
             error = ""
             cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#\s")
             for item in buff.split("\n"):
                 if cmd_line_pattern.search(item):
                     continue
-                if "MINOR: " in item:
+                if any(match.search(item) for match in self.terminal_stderr_re):
                     row = item.strip()
                     row_list = row.split(": ")
                     error += row_list[2]
@@ -246,16 +297,20 @@ class NokiaSROSDriver(NetworkDriver):
         If changes were made, revert changes to the original state.
         """
         cmd = ["quit-config", "configure exclusive", "rollback 1", "commit", "exit"]
-        buff = self._perform_cli_commands(cmd)
+        buff = self._perform_cli_commands(cmd, True)
+        error = ""
+
         if buff is not None:
-            new_buff = ''
             for item in buff.split("\n"):
                 if "MINOR: CLI #2069" in item:
                     continue
-                elif "MINOR: " in item:
+                elif any(match.search(item) for match in self.terminal_stderr_re):
                     row = item.strip()
-                    new_buff += row
-                    return new_buff
+                    row_list = row.split(": ")
+                    error += row_list[2]
+                if error:
+                    print("Error while rollback: ", error)
+                    break
 
     def compare_config(self):
         """
@@ -265,13 +320,16 @@ class NokiaSROSDriver(NetworkDriver):
         """
         buff = ""
         if self.fmt == "text":
-            buff = self._perform_cli_commands(["environment more false", "compare"])
+            buff = self._perform_cli_commands(
+                ["environment more false", "compare"], True
+            )
+            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
+            # buff = self._perform_cli_commands(["environment more false", "compare"])
         if buff is not None:
             new_buff = ""
             first_compare = False
-            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#\s")
             for item in buff.split("\n"):
-                if "MINOR: " in item:
+                if any(match.search(item) for match in self.terminal_stderr_re):
                     row = item.strip()
                     new_buff += row
                     break
@@ -283,6 +341,8 @@ class NokiaSROSDriver(NetworkDriver):
                 elif "environment more false" in item:
                     continue
                 elif cmd_line_pattern.search(item):
+                    continue
+                elif self.terminal_stdout_re[0].search(item):
                     continue
                 else:
                     row = item.rstrip()
@@ -324,20 +384,30 @@ class NokiaSROSDriver(NetworkDriver):
                 if not self.lock_disable and not self.session_config_lock:
                     self._lock_config()
                 configuration = etree.XML(configuration)
-                self.conn.edit_config(config=configuration, target="candidate", default_operation="merge")
+                configuration_tree = etree.ElementTree(configuration)
+                root = configuration_tree.getroot()
+                if root.tag != "{urn:ietf:params:xml:ns:netconf:base:1.0}config":
+                    newroot = etree.Element(
+                        "{urn:ietf:params:xml:ns:netconf:base:1.0}config"
+                    )
+                    newroot.insert(0, root)
+                    self.conn.edit_config(
+                        config=newroot, target="candidate", default_operation="merge"
+                    )
                 self.conn.validate(source="candidate")
 
             else:
                 configuration = configuration.split("\n")
                 configuration.insert(0, "edit-config exclusive")
-                buff = self._perform_cli_commands(configuration)
+                buff = self._perform_cli_commands(configuration, False)
+                # error checking
                 if buff is not None:
                     for item in buff.split("\n"):
-                        if "MINOR: " in item:
-                            raise MergeConfigException("Merger issue : %s", item)
+                        if any(match.search(item) for match in self.terminal_stderr_re):
+                            raise MergeConfigException("Merge issue: %s", item)
 
         except MergeConfigException as me:
-            raise MergeConfigException("Merger issue : %s", me)
+            raise MergeConfigException("Merge issue : %s", me)
 
     def load_replace_candidate(self, filename=None, config=None):
         """
@@ -364,17 +434,26 @@ class NokiaSROSDriver(NetworkDriver):
                 if not self.lock_disable and not self.session_config_lock:
                     self._lock_config()
                 configuration = etree.XML(configuration)
-                self.conn.edit_config(config=configuration, target="candidate",
-                                      default_operation="replace")
+                configuration_tree = etree.ElementTree(configuration)
+                root = configuration_tree.getroot()
+                if root.tag != "{urn:ietf:params:xml:ns:netconf:base:1.0}config":
+                    newroot = etree.Element(
+                        "{urn:ietf:params:xml:ns:netconf:base:1.0}config"
+                    )
+                    newroot.insert(0, root)
+                    self.conn.edit_config(
+                        config=newroot, target="candidate", default_operation="replace",
+                    )
                 self.conn.validate(source="candidate")
             else:
                 configuration = configuration.split("\n")
                 configuration.insert(0, "edit-config exclusive")
                 configuration.insert(1, "delete configure")
-                buff = self._perform_cli_commands(configuration)
+                buff = self._perform_cli_commands(configuration, False)
+                # error checking
                 if buff is not None:
                     for item in buff.split("\n"):
-                        if "MINOR" in item:
+                        if any(match.search(item) for match in self.terminal_stderr_re):
                             raise ReplaceConfigException("Replace issue: %s", item)
         except ReplaceConfigException as rex:
             raise ReplaceConfigException("Replace issue: %s", rex)
@@ -909,7 +988,7 @@ class NokiaSROSDriver(NetworkDriver):
             _get_interfaces_list(vpls_service)
         return network_instances
 
-    def get_config(self, retrieve="all", full=False, sanitized=False):
+    def get_config(self, retrieve="all", full=False, sanitized=False, format="xml"):
         """
             Return the configuration of a device.
             Parameters:
@@ -930,78 +1009,101 @@ class NokiaSROSDriver(NetworkDriver):
             The object returned is a dictionary with a key for each configuration store
         """
         configuration = {"running": "", "candidate": "", "startup": ""}
+        if format == "cli":
+            # Getting output in MD-CLI format
+            # retrieving config using md-cli
+            cmd_running = "admin show configuration | no-more"
+            cmd_candidate = ["edit-config read-only", "info | no-more", "quit-config"]
 
-        # Getting output in MD-CLI format
-        # retrieving config using md-cli
-        cmd_running = "admin show configuration | no-more"
-        cmd_candidate = ["edit-config read-only", "info | no-more", "quit-config"]
-
-        # helper method
-        def _update_buff(buff, cmd):
-            if "@nokia.com" in buff:
-                buff = buff.split("@nokia.com.")
-                updated_buff = [buff[1]]
-            else:
-                updated_buff = [buff]
-            new_buff = ""
-            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
-            match_strings = ["Entering global", "[gl:configure]", cmd_candidate[0], cmd_running]
-            for item in updated_buff[0].split("\n"):
-                row = item.rstrip()
-                if any(match in item for match in match_strings):
-                    continue
-                if "[]" in item:
-                    continue
-                elif cmd_line_pattern.search(item) or not row:
-                    continue
-                elif "persistent-indices" in item:
-                    break
+            # helper method
+            def _update_buff(buff):
+                if "@nokia.com" in buff:
+                    buff = buff.split("@nokia.com.")
+                    updated_buff = [buff[1]]
                 else:
-                    new_buff += row + "\n"
-            return new_buff
+                    updated_buff = [buff]
+                new_buff = ""
+                cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
+                match_strings = [
+                    cmd_candidate[0],
+                    cmd_candidate[1],
+                    cmd_candidate[2],
+                    cmd_running,
+                ]
+                count = 1
+                for item in updated_buff[0].split("\n"):
+                    row = item.rstrip()
+                    if any(match in item for match in match_strings):
+                        continue
+                    if "[]" in item:
+                        continue
+                    elif cmd_line_pattern.search(item) or not row:
+                        continue
+                    elif "persistent-indices" in item:
+                        break
+                    else:
+                        if "configure" in row and len(row) == 11:
+                            new_buff += row.strip() + "\n"
+                            count = count+1
+                        else:
+                            if count == 1:
+                                continue
+                            new_buff += row + "\n"
+                return new_buff[: new_buff.rfind("\n")]
 
-        if retrieve == "running":
-            buff_running = self._perform_cli_commands([cmd_running])
-            configuration["running"] = _update_buff(buff_running, cmd_running)
-            return configuration
-        elif retrieve == "startup":
-            buff_running = self._perform_cli_commands([cmd_running])
-            configuration["startup"] = _update_buff(buff_running, cmd_running)
-            return configuration
-        elif retrieve == "candidate":
-            buff_candidate = self._perform_cli_commands(cmd_candidate)
-            configuration["candidate"] = _update_buff(buff_candidate, cmd_candidate[1])
-            return configuration
-        elif retrieve == "all":
-            buff_running = self._perform_cli_commands([cmd_running])
-            buff_candidate = self._perform_cli_commands(cmd_candidate)
-            configuration["running"] = _update_buff(buff_running, cmd_running)
-            configuration["startup"] = _update_buff(buff_running, cmd_running)
-            configuration["candidate"] = _update_buff(buff_candidate, cmd_candidate[1])
-            return configuration
+            if retrieve == "running":
+                buff_running = self._perform_cli_commands([cmd_running], True)
+                configuration["running"] = _update_buff(buff_running)
+                return configuration
+            elif retrieve == "startup":
+                buff_running = self._perform_cli_commands([cmd_running], True)
+                configuration["startup"] = _update_buff(buff_running)
+                return configuration
+            elif retrieve == "candidate":
+                buff_candidate = self._perform_cli_commands(cmd_candidate, True)
+                configuration["candidate"] = _update_buff(buff_candidate)
+                return configuration
+            elif retrieve == "all":
+                buff_running = self._perform_cli_commands([cmd_running], True)
+                buff_candidate = self._perform_cli_commands(cmd_candidate, True)
+                configuration["running"] = _update_buff(buff_running)
+                configuration["startup"] = _update_buff(buff_running)
+                configuration["candidate"] = _update_buff(buff_candidate)
+                return configuration
 
-        # Uncomment below part and comment above part to get output in XML Format
         # returning the config in xml format
-        # config_data_running = to_ele(self.conn.get_config(source="running").data_xml)
-        # config_data_running_xml = to_xml(
-        #     config_data_running.xpath("configure_ns:configure", namespaces=self.nsmap)[
-        #         0
-        #     ]
-        # )
-        # config_data_candidate = to_ele(
-        #     self.conn.get_config(source="candidate").data_xml
-        # )
-        # config_data_candidate_xml = to_xml(
-        #     config_data_candidate.xpath(
-        #         "configure_ns:configure", namespaces=self.nsmap
-        #     )[0]
-        # )
-        #
-        # configuration["startup"] = config_data_running_xml
-        # configuration["running"] = config_data_running_xml
-        # configuration["candidate"] = config_data_candidate_xml
-        #
-        # return configuration
+        else:
+            if retrieve == "running" or retrieve == "all":
+                config_data_running = to_ele(
+                    self.conn.get_config(source="running").data_xml
+                )
+                config_data_running_xml = to_xml(
+                    config_data_running.xpath(
+                        "configure_ns:configure", namespaces=self.nsmap
+                    )[0]
+                )
+                # remove xml declaration
+                config_data_running_xml = re.sub(
+                    "<\?xml.*\?>", "", config_data_running_xml
+                )
+                configuration["running"] = config_data_running_xml
+                if retrieve == "all":
+                    configuration["startup"] = config_data_running_xml
+
+            if retrieve == "candidate" or retrieve == "all":
+                config_data_candidate = to_ele(
+                    self.conn.get_config(source="candidate").data_xml
+                )
+                config_data_candidate_xml = to_xml(
+                    config_data_candidate.xpath(
+                        "configure_ns:configure", namespaces=self.nsmap
+                    )[0]
+                )
+                config_data_candidate_xml = re.sub(
+                    "<\?xml.*\?>", "", config_data_candidate_xml
+                )
+                configuration["candidate"] = config_data_candidate_xml
+            return configuration
 
     def get_optics(self):
         """
@@ -1132,7 +1234,9 @@ class NokiaSROSDriver(NetworkDriver):
                         namespaces=self.nsmap,
                     ),
                     "ip": self._find_txt(
-                        neighbor_discovered, "state_ns:ipv4-address", namespaces=self.nsmap,
+                        neighbor_discovered,
+                        "state_ns:ipv4-address",
+                        namespaces=self.nsmap,
                     ),
                     "age": convert(
                         float,
@@ -1152,13 +1256,16 @@ class NokiaSROSDriver(NetworkDriver):
         )
 
         for interface in result.xpath(
-                "state_ns:state/state_ns:router/state_ns:interface", namespaces=self.nsmap
+            "state_ns:state/state_ns:router/state_ns:interface", namespaces=self.nsmap
         ):
-            interface_name = self._find_txt(interface, "state_ns:interface-name",
-                                            namespaces=self.nsmap)
+            interface_name = self._find_txt(
+                interface, "state_ns:interface-name", namespaces=self.nsmap
+            )
 
-            for neighbor in interface.xpath("state_ns:ipv4/state_ns:neighbor-discovery/state_ns:neighbor",
-                                            namespaces=self.nsmap):
+            for neighbor in interface.xpath(
+                "state_ns:ipv4/state_ns:neighbor-discovery/state_ns:neighbor",
+                namespaces=self.nsmap,
+            ):
 
                 discovered_nei_ip = self._find_txt(
                     neighbor, "state_ns:ipv4-address", namespaces=self.nsmap,
@@ -1168,11 +1275,13 @@ class NokiaSROSDriver(NetworkDriver):
                 _get_arp_table(neighbor)
 
         for interface in result.xpath(
-                "state_ns:state/state_ns:service/state_ns:vprn/state_ns:interface",
-                namespaces=self.nsmap,
+            "state_ns:state/state_ns:service/state_ns:vprn/state_ns:interface",
+            namespaces=self.nsmap,
         ):
-            for neighbor in interface.xpath("state_ns:ipv4/state_ns:neighbor-discovery/state_ns:neighbor",
-                                            namespaces=self.nsmap):
+            for neighbor in interface.xpath(
+                "state_ns:ipv4/state_ns:neighbor-discovery/state_ns:neighbor",
+                namespaces=self.nsmap,
+            ):
                 discovered_nei_ip = self._find_txt(
                     interface, "state_ns:ipv4-address", namespaces=self.nsmap,
                 )
@@ -1382,10 +1491,10 @@ class NokiaSROSDriver(NetworkDriver):
             return ntp_stats_list
 
         cmd = ["environment more false", "show system ntp servers"]
-        buff_servers = self._perform_cli_commands(cmd)
+        buff_servers = self._perform_cli_commands(cmd, True)
         ntp_stats_list = _get_ntp_stats_data(buff_servers)
         cmd = ["environment more false", "show system ntp peers"]
-        buff_peers = self._perform_cli_commands(cmd)
+        buff_peers = self._perform_cli_commands(cmd, True)
         ntp_stats_list = _get_ntp_stats_data(buff_peers)
 
         return ntp_stats_list
@@ -1554,7 +1663,9 @@ class NokiaSROSDriver(NetworkDriver):
         def _get_protocol_attributes(router_name, local_protocol):
             # destination needs to be with prefix
             command = f"show router {router_name} route-table {destination} protocol {local_protocol} extensive all"
-            output = self._perform_cli_commands(["environment more false", command])
+            output = self._perform_cli_commands(
+                ["environment more false", command], True
+            )
             destination_address_with_prefix = ""
             next_hop_once = False
             next_hop = ""
@@ -1696,7 +1807,9 @@ class NokiaSROSDriver(NetworkDriver):
             if destination_address_with_prefix:
                 # protocol attributes local_as, as_path, local_preference
                 cmd = f"show router {router_name} bgp routes {destination_address_with_prefix} detail"
-                buff_1 = self._perform_cli_commands(["environment more false", cmd])
+                buff_1 = self._perform_cli_commands(
+                    ["environment more false", cmd], True
+                )
 
                 for d in route_to_dict[destination_address_with_prefix]:
                     next_hop = d.get("next_hop")
@@ -1804,7 +1917,9 @@ class NokiaSROSDriver(NetworkDriver):
                 for d in route_to_dict[destination_address_with_prefix]:
                     d.update({"protocol_attributes": {}})
                 command = f"show router {router_name} isis routes ip-prefix-prefix-length {destination_address_with_prefix}"
-                buff_1 = self._perform_cli_commands(["environment more false", command])
+                buff_1 = self._perform_cli_commands(
+                    ["environment more false", command], True
+                )
                 prev_row = ""
                 for item_1 in buff_1.split("\n"):
                     if destination_address_with_prefix in item_1 or prev_row:
@@ -1833,7 +1948,9 @@ class NokiaSROSDriver(NetworkDriver):
                 for d in route_to_dict[destination_address_with_prefix]:
                     d.update({"protocol_attributes": {}})
                 command = f"show router {router_name} ospf routes {destination_address_with_prefix}"
-                buff_1 = self._perform_cli_commands(["environment more false", command])
+                buff_1 = self._perform_cli_commands(
+                    ["environment more false", command], True
+                )
                 first_row = False
                 for item_1 in buff_1.split("\n"):
                     if destination_address_with_prefix in item_1 or first_row:
@@ -1890,7 +2007,7 @@ class NokiaSROSDriver(NetworkDriver):
             else:
                 cmd = f"show router {name} route-table {destination} \n"
 
-            buff = self._perform_cli_commands(["environment more false", cmd])
+            buff = self._perform_cli_commands(["environment more false", cmd], True)
             for item in buff.split("\n"):
                 if ip_pattern.search(item):
                     if "# show" in item:
@@ -1950,8 +2067,9 @@ class NokiaSROSDriver(NetworkDriver):
         probes_results = {}
 
         result = to_ele(
-            self.conn.get(filter=GET_PROBES_CONFIG["_"], with_defaults="report-all").data_xml,
-
+            self.conn.get(
+                filter=GET_PROBES_CONFIG["_"], with_defaults="report-all"
+            ).data_xml,
         )
         for probe in result.xpath(
             "configure_ns:configure/configure_ns:saa/configure_ns:owner",
@@ -1972,7 +2090,7 @@ class NokiaSROSDriver(NetworkDriver):
             probes_results[probe_name].update({test_name: {}})
             path = "configure_ns:type/configure_ns:icmp-ping"
             cmd = f"show saa {test_name}"
-            buff = self._perform_cli_commands(["environment more false", cmd])
+            buff = self._perform_cli_commands(["environment more false", cmd], True)
             test_number_1 = ""
             test_number_2 = 0
             found_first_test = False
@@ -2048,19 +2166,29 @@ class NokiaSROSDriver(NetworkDriver):
                     "probe_count": convert(
                         int,
                         self._find_txt(
-                            probe,
-                            f"{path}/configure_ns:count",
-                            namespaces=self.nsmap,
+                            probe, f"{path}/configure_ns:count", namespaces=self.nsmap,
                         ),
                     ),
                     "rtt": convert(float, current_test_avg_delay, default=-1.0),
                     "round_trip_jitter": convert(float, roundtrip_jitter, default=-1.0),
-                    "current_test_min_delay": convert(float, current_test_min_delay, default=-1.0),
-                    "current_test_max_delay": convert(float, current_test_max_delay, default=-1.0),
-                    "current_test_avg_delay": convert(float, current_test_avg_delay, default=-1.0),
-                    "last_test_min_delay": convert(float, last_test_min_delay, default=-1.0),
-                    "last_test_max_delay": convert(float, last_test_max_delay, default=-1.0),
-                    "last_test_avg_delay": convert(float, last_test_avg_delay, default=-1.0),
+                    "current_test_min_delay": convert(
+                        float, current_test_min_delay, default=-1.0
+                    ),
+                    "current_test_max_delay": convert(
+                        float, current_test_max_delay, default=-1.0
+                    ),
+                    "current_test_avg_delay": convert(
+                        float, current_test_avg_delay, default=-1.0
+                    ),
+                    "last_test_min_delay": convert(
+                        float, last_test_min_delay, default=-1.0
+                    ),
+                    "last_test_max_delay": convert(
+                        float, last_test_max_delay, default=-1.0
+                    ),
+                    "last_test_avg_delay": convert(
+                        float, last_test_avg_delay, default=-1.0
+                    ),
                     "last_test_loss": convert(int, last_test_loss, default=-1),
                     "global_test_min_delay": -1.0,  # default value as SROS does not have global_test
                     "global_test_max_delay": -1.0,  # default value as SROS does not have global_test
@@ -2160,7 +2288,8 @@ class NokiaSROSDriver(NetworkDriver):
         mac_address_list = []
 
         cmd = "show service fdb-mac"
-        buff = self._perform_cli_commands(["environment more false", cmd])
+        buff = self._perform_cli_commands(["environment more false", cmd], True)
+        # template = "textfsm_templates//nokia_sros_show_service_fdb_mac.tpl"
         template = "textfsm_templates\\nokia_sros_show_service_fdb_mac.tpl"
         output_list = parse_with_textfsm(template, buff)
         new_records = []
@@ -3543,7 +3672,8 @@ class NokiaSROSDriver(NetworkDriver):
             [
                 "environment more false",
                 "show chassis power-management utilization detail",
-            ]
+            ],
+            True,
         )
         total_power_modules = 0
         output = 0.0
@@ -3680,7 +3810,7 @@ class NokiaSROSDriver(NetworkDriver):
 
         for name in name_list:
             cmd = ["environment more false", f"show router {name} neighbor"]
-            buff = self._perform_cli_commands(cmd)
+            buff = self._perform_cli_commands(cmd, True)
             ipv6_address_regex = re.compile(
                 "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
             )
@@ -3749,7 +3879,7 @@ class NokiaSROSDriver(NetworkDriver):
             d6=str(count),
             d7=vrf,
         )
-        buff = self._perform_cli_commands(["environment more false", command])
+        buff = self._perform_cli_commands(["environment more false", command], True)
         for item in buff.split("\n"):
             if "No route to destination" in item:
                 value = "unknown host " + destination
@@ -3820,7 +3950,7 @@ class NokiaSROSDriver(NetworkDriver):
             "environment progress-indicator admin-state disable",
             cmd,
         ]
-        buff = self._perform_cli_commands(command)
+        buff = self._perform_cli_commands(command, True)
         for item in buff.split("\n"):
             if "* * *" in item:
                 value = "unknown host " + destination
@@ -3868,7 +3998,7 @@ class NokiaSROSDriver(NetworkDriver):
         """
         cli_output = {}
         for cmd in commands:
-            buff = self._perform_cli_commands([cmd])
+            buff = self._perform_cli_commands([cmd], True)
             new_buff = ""
             cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#\s")
             for item in buff.split("\n"):

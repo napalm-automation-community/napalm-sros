@@ -7,3 +7,4 @@ textfsm~=1.1.0
 paramiko~=2.7.1
 lxml~=4.5.1
 ncclient~=0.6.7
+xmldiff~=2.3
