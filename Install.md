@@ -32,6 +32,7 @@
                 user "netconf" {
                     password "nokia"
                     access {
+                        console true
                         netconf true
                     }
                     console {
