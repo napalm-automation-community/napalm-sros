@@ -178,15 +178,15 @@ class NokiaSROSDriver(NetworkDriver):
                         command = command + "\n"
                     if self.ssh_channel.send_ready():
                         self.ssh_channel.send(command)
-                time.sleep(0.5)
+                time.sleep(0.1)
                 while self.ssh_channel.recv_ready():
-                    time.sleep(0.5)
+                    time.sleep(0.1)
                     resp = self.ssh_channel.recv(999)
                     buff += resp.decode("ascii")
 
             time.sleep(1.0)
             while self.ssh_channel.recv_ready():
-                time.sleep(1.0)
+                time.sleep(0.1)
                 resp = self.ssh_channel.recv(999)
                 buff += resp.decode("ascii")
 
@@ -404,6 +404,11 @@ class NokiaSROSDriver(NetworkDriver):
                     newroot.insert(0, root)
                     self.conn.edit_config(
                         config=newroot, target="candidate", default_operation="merge"
+                    )
+
+                else:
+                    self.conn.edit_config(
+                        config=configuration, target="candidate", default_operation="merge",
                     )
                 self.conn.validate(source="candidate")
 
