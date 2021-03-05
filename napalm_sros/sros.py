@@ -25,10 +25,12 @@ import time
 import re
 import logging
 import datetime
-
+import xmltodict
+from dictdiffer import diff
 import paramiko
 
 # import NAPALM libraries
+
 from lxml import etree
 
 from napalm.base import NetworkDriver
@@ -312,7 +314,7 @@ class NokiaSROSDriver(NetworkDriver):
                     print("Error while rollback: ", error)
                     break
 
-    def compare_config(self):
+    def compare_config(self, running_config="", candidate_config=""):
         """
         :return: A string showing the difference between the running configuration and the candidate
         configuration. The running_config is loaded automatically just before doing the comparison
@@ -325,6 +327,14 @@ class NokiaSROSDriver(NetworkDriver):
             )
             cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
             # buff = self._perform_cli_commands(["environment more false", "compare"])
+        else:
+            #  if format is xml we convert them into dict and perform a diff on configs to return the difference
+            running_dict = xmltodict.parse(running_config, process_namespaces=True)
+            candidate_dict = xmltodict.parse(candidate_config, process_namespaces=True)
+            new_buff = ""
+            result = diff(running_dict, candidate_dict)
+            new_buff += ' '.join([str(elem) for elem in result])
+            return new_buff
         if buff is not None:
             new_buff = ""
             first_compare = False
@@ -355,6 +365,7 @@ class NokiaSROSDriver(NetworkDriver):
             return new_buff.rstrip("\n")
         else:
             return ""
+
 
     def _determinne_config_format(self, config) -> str:
         if config.strip().startswith("<"):
@@ -393,6 +404,11 @@ class NokiaSROSDriver(NetworkDriver):
                     newroot.insert(0, root)
                     self.conn.edit_config(
                         config=newroot, target="candidate", default_operation="merge"
+                    )
+
+                else:
+                    self.conn.edit_config(
+                        config=configuration, target="candidate", default_operation="merge",
                     )
                 self.conn.validate(source="candidate")
 
@@ -443,6 +459,10 @@ class NokiaSROSDriver(NetworkDriver):
                     newroot.insert(0, root)
                     self.conn.edit_config(
                         config=newroot, target="candidate", default_operation="replace",
+                    )
+                else:
+                    self.conn.edit_config(
+                        config=configuration, target="candidate", default_operation="replace",
                     )
                 self.conn.validate(source="candidate")
             else:
