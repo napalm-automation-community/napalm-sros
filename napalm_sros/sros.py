@@ -314,7 +314,7 @@ class NokiaSROSDriver(NetworkDriver):
                     print("Error while rollback: ", error)
                     break
 
-    def compare_config(self, running_config="", candidate_config=""):
+    def compare_config(self):
         """
         :return: A string showing the difference between the running configuration and the candidate
         configuration. The running_config is loaded automatically just before doing the comparison
@@ -329,11 +329,18 @@ class NokiaSROSDriver(NetworkDriver):
             # buff = self._perform_cli_commands(["environment more false", "compare"])
         else:
             #  if format is xml we convert them into dict and perform a diff on configs to return the difference
-            running_dict = xmltodict.parse(running_config, process_namespaces=True)
-            candidate_dict = xmltodict.parse(candidate_config, process_namespaces=True)
+            # running_dict = xmltodict.parse(running_config, process_namespaces=True)
+            running_dict = xmltodict.parse(
+                self.get_config(retrieve="running")["running"], process_namespaces=True
+            )
+            # candidate_dict = xmltodict.parse(candidate_config, process_namespaces=True)
+            candidate_dict = xmltodict.parse(
+                self.get_config(retrieve="candidate")["candidate"],
+                process_namespaces=True,
+            )
             new_buff = ""
             result = diff(running_dict, candidate_dict)
-            new_buff += ' '.join([str(elem) for elem in result])
+            new_buff += " ".join([str(elem) for elem in result])
             return new_buff
         if buff is not None:
             new_buff = ""
@@ -365,7 +372,6 @@ class NokiaSROSDriver(NetworkDriver):
             return new_buff.rstrip("\n")
         else:
             return ""
-
 
     def _determinne_config_format(self, config) -> str:
         if config.strip().startswith("<"):
@@ -408,7 +414,9 @@ class NokiaSROSDriver(NetworkDriver):
 
                 else:
                     self.conn.edit_config(
-                        config=configuration, target="candidate", default_operation="merge",
+                        config=configuration,
+                        target="candidate",
+                        default_operation="merge",
                     )
                 self.conn.validate(source="candidate")
 
@@ -462,7 +470,9 @@ class NokiaSROSDriver(NetworkDriver):
                     )
                 else:
                     self.conn.edit_config(
-                        config=configuration, target="candidate", default_operation="replace",
+                        config=configuration,
+                        target="candidate",
+                        default_operation="replace",
                     )
                 self.conn.validate(source="candidate")
             else:
@@ -1008,7 +1018,13 @@ class NokiaSROSDriver(NetworkDriver):
             _get_interfaces_list(vpls_service)
         return network_instances
 
-    def get_config(self, retrieve="all", full=False, sanitized=False, format="xml"):
+    def get_config(
+        self,
+        retrieve="all",
+        full=False,
+        sanitized=False,
+        optional_args={"format": "xml"},
+    ):
         """
             Return the configuration of a device.
             Parameters:
@@ -1017,6 +1033,7 @@ class NokiaSROSDriver(NetworkDriver):
                 The rest will be set to “”.
                 full (bool) – Retrieve all the configuration. For instance, on ios, “sh run all”.
                 sanitized(bool) - Remove secret data . Default is false
+                optional_args - To define the format
             Returns:
                 running(string) - Representation of the native running configuration
                 candidate(string) - Representation of the native candidate configuration.
@@ -1029,7 +1046,7 @@ class NokiaSROSDriver(NetworkDriver):
             The object returned is a dictionary with a key for each configuration store
         """
         configuration = {"running": "", "candidate": "", "startup": ""}
-        if format == "cli":
+        if optional_args is not None and optional_args["format"] == "cli":
             # Getting output in MD-CLI format
             # retrieving config using md-cli
             cmd_running = "admin show configuration | no-more"
@@ -1064,7 +1081,7 @@ class NokiaSROSDriver(NetworkDriver):
                     else:
                         if "configure" in row and len(row) == 11:
                             new_buff += row.strip() + "\n"
-                            count = count+1
+                            count = count + 1
                         else:
                             if count == 1:
                                 continue

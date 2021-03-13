@@ -105,6 +105,7 @@ class FakeSSHConnectionChannel:
 class FakeNokiaSROSDevice:
     def __init__(self):
         self.get = FakeGetMethod()
+        self.get_config = FakeGetConfigMethod()
 
     def open(self):
         pass
@@ -113,12 +114,33 @@ class FakeNokiaSROSDevice:
         pass
 
 
+class FakeGetConfigMethod:
+    """
+    Fake Get config method for XML output
+    """
+
+    def response(self, source=""):
+        file_name = method_name
+        file_name = file_name.split("_", 1)[1]
+
+        if file_name == "get_config_filtered":
+            file_name = file_name.rsplit("_", 1)[0] + "_" + source
+        else:
+            file_name = file_name + "_" + source
+
+        response_string = TestGetterNokiaSROSDriver.read_txt_file(
+            "sros/mock_data/{}.txt".format(file_name)
+        )
+        return FakeGetReply(data=response_string)
+    __call__ = response
+
+
 class FakeGetMethod:
     """
     Fake Get Method.
     """
 
-    def response(self, filter="", with_defaults=""):
+    def response(self, filter="", with_defaults="", source=""):
         file_name = method_name
         file_name = file_name.split("_", 1)[1]
 
