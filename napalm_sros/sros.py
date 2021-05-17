@@ -332,12 +332,11 @@ class NokiaSROSDriver(NetworkDriver):
             #  if format is xml we convert them into dict and perform a diff on configs to return the difference
             # running_dict = xmltodict.parse(running_config, process_namespaces=True)
             running_dict = xmltodict.parse(
-                self.get_config(retrieve="running")["running"], process_namespaces=True
+                self.get_config(retrieve="running")["running"], process_namespaces=False
             )
             # candidate_dict = xmltodict.parse(candidate_config, process_namespaces=True)
             candidate_dict = xmltodict.parse(
-                self.get_config(retrieve="candidate")["candidate"],
-                process_namespaces=True,
+                self.get_config(retrieve="candidate")["candidate"], process_namespaces=False
             )
             new_buff = ""
             result = diff(running_dict, candidate_dict)
