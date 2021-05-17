@@ -28,6 +28,7 @@ import datetime
 import xmltodict
 from dictdiffer import diff
 import paramiko
+import json
 
 # import NAPALM libraries
 
@@ -340,7 +341,8 @@ class NokiaSROSDriver(NetworkDriver):
             )
             new_buff = ""
             result = diff(running_dict, candidate_dict)
-            new_buff += " ".join([str(elem) for elem in result])
+            # JvB use JSON pretty printing import json
+            new_buff += "\n".join([json.dumps(e, sort_keys=True, indent=4) for e in result])
             return new_buff
         if buff is not None:
             new_buff = ""
