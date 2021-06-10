@@ -21,6 +21,7 @@
 Napalm driver for SROS.
 """
 # import standard library
+import json
 import time
 import re
 import logging
@@ -314,12 +315,16 @@ class NokiaSROSDriver(NetworkDriver):
                     print("Error while rollback: ", error)
                     break
 
-    def compare_config(self):
+    def compare_config(self, optional_args=None):
         """
         :return: A string showing the difference between the running configuration and the candidate
         configuration. The running_config is loaded automatically just before doing the comparison
         so there is no need for you to do it.
         """
+
+        if optional_args is None:
+            optional_args = {"json_format": False}
+
         buff = ""
         if self.fmt == "text":
             buff = self._perform_cli_commands(
@@ -331,16 +336,22 @@ class NokiaSROSDriver(NetworkDriver):
             #  if format is xml we convert them into dict and perform a diff on configs to return the difference
             # running_dict = xmltodict.parse(running_config, process_namespaces=True)
             running_dict = xmltodict.parse(
-                self.get_config(retrieve="running")["running"], process_namespaces=True
+                self.get_config(retrieve="running")["running"], process_namespaces=optional_args["json_format"]
             )
             # candidate_dict = xmltodict.parse(candidate_config, process_namespaces=True)
             candidate_dict = xmltodict.parse(
                 self.get_config(retrieve="candidate")["candidate"],
-                process_namespaces=True,
+                process_namespaces=optional_args["json_format"],
             )
             new_buff = ""
             result = diff(running_dict, candidate_dict)
-            new_buff += " ".join([str(elem) for elem in result])
+            if optional_args["json_format"]:
+                new_buff += "\n".join(
+                    [json.dumps(e, sort_keys=True, indent=4) for e in result]
+                )
+            else:
+                new_buff += " ".join([str(elem) for elem in result])
+
             return new_buff
         if buff is not None:
             new_buff = ""
