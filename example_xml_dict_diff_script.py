@@ -13,6 +13,8 @@ device.load_replace_candidate(filename="filename")
 
 # xml diff between candidate and running
 print(device.compare_config())
+# for json format use the below option
+# print(device.compare_config(optional_args={'json_format':True}))
 
 # commit the config
 device.commit_config()
