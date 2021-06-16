@@ -1021,7 +1021,7 @@ class NokiaSROSDriver(NetworkDriver):
             "state_ns:state/state_ns:service/state_ns:vpls", namespaces=self.nsmap
         ):
             instance_name = self._find_txt(
-                vpls_service, "service-name", namespaces=self.nsmap
+                vpls_service, "state_ns:service-name", namespaces=self.nsmap
             )
             if instance_name == "":
                 continue
