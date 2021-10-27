@@ -54,7 +54,7 @@
        ```   
 
 2) From [NAPALM NOKIA REPO](https://github.com/napalm-automation-community/napalm-sros) clone the repository on your local computer
-    ```
+   ```
    git clone https://github.com/napalm-automation-community/napalm-sros
    ``` 
    
@@ -73,6 +73,14 @@
     device.close()
    ```
  
+Alternatively you can use the following step 2 for installing as a dependency in your python environment with a requirements.txt
+
+2) Include the following in your requirements.txt file.
+   ```
+   git+https://github.com/napalm-automation-community/napalm-sros.git@master#egg=napalm-sros
+   ```
+   ***Note*** Instead of installing the master branch you can also install a specific commit as well. Further details can be found in [pip documentation](https://pip.pypa.io/en/stable/topics/vcs-support/#git).  
+
 
 We welcome suggestions and contributions. Please contact the Nokia owners of this repository for how to contribute.
 
