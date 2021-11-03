@@ -3856,9 +3856,9 @@ class NokiaSROSDriver(NetworkDriver):
                 if "Power Module" in item:
                     total_power_modules = total_power_modules + 1
                 if "Current Util." in item:
-                    row = item.strip()
-                    row_list = re.split(": | W", row)
-                    output = float(row_list[1])
+                    watts = re.match("^.*:\s*(\d+[.]\d+) Watts.*$", item )
+                    if watts:
+                        output = float( watts.groups()[0] )
 
             for power_module in result.xpath(
                 "state_ns:state/state_ns:chassis/state_ns:power-shelf/state_ns:power-module",
@@ -3888,7 +3888,8 @@ class NokiaSROSDriver(NetworkDriver):
                 )
                 environment_data["power"].update(
                     {
-                        power_module_id: {
+                        # JvB make it a string with a name matching the power port name in Netbox
+                        f"PS{power_module_id}": {
                             "status": oper_state,
                             "capacity": capacity,
                             "output": output / total_power_modules,
@@ -3942,10 +3943,11 @@ class NokiaSROSDriver(NetworkDriver):
                         ),
                         default=-1,
                     )
-                    environment_data["cpu"].update({sample_period: {"%usage": cpu_usage}})
+                    environment_data["cpu"].update({ f"Summary for all CPUs(sample_period={sample_period}s)": { "%usage": cpu_usage }})
 
+                # JvB: available_ram = total available, not remaining
                 environment_data["memory"].update(
-                    {"available_ram": available_ram, "used_ram": used_ram}
+                 {"available_ram": available_ram + used_ram, "used_ram": used_ram}
                 )
             return environment_data
         except Exception as e:
