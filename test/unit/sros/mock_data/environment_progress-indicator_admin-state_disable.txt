@@ -1,5 +1,0 @@
-[]
-A:netconf@nokia01.sfo07# environment progress-indicator admin-state disable
-
-[]
-A:netconf@nokia01.sfo07#

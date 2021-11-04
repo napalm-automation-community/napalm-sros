@@ -1,6 +1,0 @@
-[]
-A:netconf@vSR-AUTO-01# configure global
-INFO: CLI #2054: Entering global configuration mode
-
-[gl:configure]
-A:netconf@vSR-AUTO-01#
