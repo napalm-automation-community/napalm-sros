@@ -1,6 +1,3 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python.
-# It will be extended to perform the NAPALM CI checks against the nokia napalm-sros driver shortly.
-
 name: napalm-sros
 
 on: [push, pull_request]
@@ -31,3 +28,4 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+
