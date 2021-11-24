@@ -98,6 +98,7 @@ class NokiaSROSDriver(NetworkDriver):
             "state_ns": "urn:nokia.com:sros:ns:yang:sr:state",
             "configure_ns": "urn:nokia.com:sros:ns:yang:sr:conf",
         }
+        self.optional_args = None
 
     def open(self):
         """Implement the NAPALM method open (mandatory)"""
@@ -307,7 +308,7 @@ class NokiaSROSDriver(NetworkDriver):
         if not self.lock_disable and not self.session_config_lock:
             self._unlock_config()
 
-    def commit_config(self, message=""):
+    def commit_config(self, message="", revert_in=None):
         """
         Commits the changes requested by the method load_replace_candidate or load_merge_candidate.
         """
@@ -350,15 +351,15 @@ class NokiaSROSDriver(NetworkDriver):
                     print("Error while rollback: ", error)
                     break
 
-    def compare_config(self, optional_args=None):
+    def compare_config(self):
         """
         :return: A string showing the difference between the running configuration and the candidate
         configuration. The running_config is loaded automatically just before doing the comparison
         so there is no need for you to do it.
         """
 
-        if optional_args is None:
-            optional_args = {"json_format": False}
+        if self.optional_args is None:
+            self.optional_args = {"json_format": False}
 
         buff = ""
         if self.fmt == "text":
@@ -373,16 +374,16 @@ class NokiaSROSDriver(NetworkDriver):
 
             running_dict = xmltodict.parse(
                 self.get_config(retrieve="running")["running"],
-                process_namespaces=not optional_args["json_format"],
+                process_namespaces=not self.optional_args["json_format"],
             )
             # candidate_dict = xmltodict.parse(candidate_config, process_namespaces=True)
             candidate_dict = xmltodict.parse(
                 self.get_config(retrieve="candidate")["candidate"],
-                process_namespaces=not optional_args["json_format"],
+                process_namespaces=not self.optional_args["json_format"],
             )
             new_buff = ""
             result = diff(running_dict, candidate_dict)
-            if optional_args["json_format"]:
+            if self.optional_args["json_format"]:
                 new_buff += "\n".join(
                     [json.dumps(e, sort_keys=True, indent=4) for e in result]
                 )
@@ -798,7 +799,7 @@ class NokiaSROSDriver(NetworkDriver):
                 )
                 interfaces[if_name] = ifd
 
-            return
+            return interfaces
         except Exception as e:
             print("Error in method get interfaces : {}".format(e))
             log.error("Error in method get interfaces : %s" % traceback.format_exc())
@@ -1089,7 +1090,6 @@ class NokiaSROSDriver(NetworkDriver):
         retrieve="all",
         full=False,
         sanitized=False,
-        optional_args={"format": "xml"},
     ):
         """
             Return the configuration of a device.
@@ -1113,7 +1113,9 @@ class NokiaSROSDriver(NetworkDriver):
         """
         try:
             configuration = {"running": "", "candidate": "", "startup": ""}
-            if optional_args is not None and optional_args["format"] == "cli":
+            if self.optional_args is None:
+                self.optional_args = {"format": "xml"}
+            if self.optional_args["format"] == "cli" and (sanitized is True or sanitized is False):
                 # Getting output in MD-CLI format
                 # retrieving config using md-cli
                 cmd_running = "admin show configuration | no-more"
@@ -1176,7 +1178,8 @@ class NokiaSROSDriver(NetworkDriver):
                     return configuration
 
             # returning the config in xml format
-            else:
+            elif self.optional_args["format"] == "xml" and (sanitized is True or sanitized is False):
+                config_data_running_xml = ""
                 if retrieve == "running" or retrieve == "all":
                     config_data_running = to_ele(
                         self.conn.get_config(source="running").data_xml
@@ -1191,8 +1194,9 @@ class NokiaSROSDriver(NetworkDriver):
                         "<\?xml.*\?>", "", config_data_running_xml
                     )
                     configuration["running"] = config_data_running_xml
-                    if retrieve == "all":
-                        configuration["startup"] = config_data_running_xml
+
+                if retrieve == "startup" or retrieve == "all":
+                    configuration["startup"] = config_data_running_xml
 
                 if retrieve == "candidate" or retrieve == "all":
                     config_data_candidate = to_ele(
@@ -2441,8 +2445,8 @@ class NokiaSROSDriver(NetworkDriver):
 
             cmd = "show service fdb-mac"
             buff = self._perform_cli_commands(["environment more false", cmd], True)
-            # template = "textfsm_templates//nokia_sros_show_service_fdb_mac.tpl"
-            template = "textfsm_templates\\nokia_sros_show_service_fdb_mac.tpl"
+            template = "textfsm_templates//nokia_sros_show_service_fdb_mac.tpl"
+            # template = "textfsm_templates\\nokia_sros_show_service_fdb_mac.tpl"
             output_list = parse_with_textfsm(template, buff)
             new_records = []
             for record in output_list:
@@ -3857,8 +3861,9 @@ class NokiaSROSDriver(NetworkDriver):
                     total_power_modules = total_power_modules + 1
                 if "Current Util." in item:
                     row = item.strip()
-                    row_list = re.split(": | W", row)
-                    output = float(row_list[1])
+                    watts = re.match("^.*:\s*(\d+[.]\d+) Watts.*$", item)
+                    if watts:
+                        output = float(watts.groups()[0])
 
             for power_module in result.xpath(
                 "state_ns:state/state_ns:chassis/state_ns:power-shelf/state_ns:power-module",
@@ -3888,7 +3893,7 @@ class NokiaSROSDriver(NetworkDriver):
                 )
                 environment_data["power"].update(
                     {
-                        power_module_id: {
+                        str(power_module_id): {
                             "status": oper_state,
                             "capacity": capacity,
                             "output": output / total_power_modules,
@@ -3942,10 +3947,10 @@ class NokiaSROSDriver(NetworkDriver):
                         ),
                         default=-1,
                     )
-                    environment_data["cpu"].update({sample_period: {"%usage": cpu_usage}})
+                    environment_data["cpu"].update({str(sample_period): {"%usage": cpu_usage}})
 
                 environment_data["memory"].update(
-                    {"available_ram": available_ram, "used_ram": used_ram}
+                    {"available_ram": available_ram + used_ram, "used_ram": used_ram}
                 )
             return environment_data
         except Exception as e:
@@ -4032,14 +4037,20 @@ class NokiaSROSDriver(NetworkDriver):
         self,
         destination,
         source=C.PING_SOURCE,
-        ttl=128,  # ttl should be in the range 1..128
+        ttl=C.PING_TTL,
         timeout=C.PING_TIMEOUT,
         size=C.PING_SIZE,
         count=C.PING_COUNT,
         vrf=C.PING_VRF,
+        source_interface=C.PING_SOURCE_INTERFACE,
     ):
+        """
+        ttl should be in the range 1..128
+        """
         try:
             ping = {}
+            if ttl > 128:
+                ttl = 128
             results = []
             command = ""
             if source and vrf:
@@ -4111,17 +4122,21 @@ class NokiaSROSDriver(NetworkDriver):
             log.error("Error in method ping : %s" % traceback.format_exc())
 
 
-
     def traceroute(
         self,
         destination,
         source=C.TRACEROUTE_SOURCE,
         ttl=C.TRACEROUTE_TTL,
-        timeout=10,  # timeout should  be between 10 and 60000
+        timeout=C.TRACEROUTE_TIMEOUT,
         vrf=C.TRACEROUTE_VRF,
     ):
+        """
+        timeout should be in the range 10..60000
+        """
         try:
             traceroute = {}
+            if timeout < 10 :
+                timeout = 10
             cmd = ""
             if source and vrf:
                 cmd = "traceroute {d1} wait {d2} ttl {d3} source-address {d4} router-instance {d5}"

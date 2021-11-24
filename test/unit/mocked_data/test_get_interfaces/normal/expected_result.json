@@ -11,7 +11,7 @@
     "system": {
         "mac_address": "a4:92:cb:aa:0e:69",
         "is_up": true,
-        "last_flapped": 1586818407.0,
+        "last_flapped": 1586793207.0,
         "mtu": 1500,
         "description": "",
         "is_enabled": true,
