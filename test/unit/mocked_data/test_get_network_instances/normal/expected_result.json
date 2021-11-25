@@ -12,6 +12,16 @@
             }
         }
     },
+    "100": {
+        "type": "VPLS",
+        "name": "100",
+        "state": {
+            "route_distinguisher": ""
+        },
+        "interfaces": {
+            "interface": {}
+        }
+    },
     "2100": {
         "type": "L3VRF",
         "name": "2100",

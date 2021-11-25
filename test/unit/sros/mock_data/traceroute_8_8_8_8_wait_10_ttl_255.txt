@@ -1,5 +1,0 @@
-traceroute to 8.8.8.8, 255 hops max, 40 byte packets
-  1  ca0071r-cb-lab-1-vlan1105.ca.alcatel-lucent.com (8.8.8.7)    2.28 ms  1.18 ms  1.20 ms
-
-[]
-A:netconf@nokia01.sfo07#

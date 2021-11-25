@@ -38,7 +38,7 @@ class PatchedNokiaSROSDriver(sros.NokiaSROSDriver):
         super(self.__class__, self).__init__(
             hostname, username, password, timeout, optional_args=optional_args
         )
-
+        self.platform = "sros"
         self.patched_attrs = ["conn", "ssh_channel"]
         self.conn = FakeNokiaSROSDevice()
         self.ssh_channel = FakeSSHConnectionChannel()
@@ -49,10 +49,17 @@ class PatchedNokiaSROSDriver(sros.NokiaSROSDriver):
         return {"is_alive": True}
 
 
-
 class FakeNokiaSROSDevice(BaseTestDouble):
+
     def __init__(self):
         self.get = FakeGetMethod(self)
+        self.get_config = FakeGetConfigMethod(self)
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass
 
     def close_session(self):
         pass
@@ -88,6 +95,30 @@ class FakeGetMethod:
     __call__ = response
 
 
+class FakeGetConfigMethod:
+    """
+    Fake Get config method for XML output
+    """
+    def __init__(self, device):
+        self._device = device
+
+    def response(self, source=""):
+        test_name = self._device.current_test
+
+        file_name = test_name.split("_", 1)[1]
+
+        if file_name == "get_config_filtered" or file_name == "get_config_sanitized":
+            file_name = file_name.rsplit("_", 1)[0] + "_" + source
+        else:
+            file_name = file_name + "_" + source
+        filename = "{}.xml".format(file_name)
+        filepath = self._device.find_file(filename)
+        response_string = self._device.read_txt_file(filepath)
+
+        return FakeGetReply(data=response_string)
+    __call__ = response
+
+
 class FakeGetReply:
     """
     Will fake the GetReply class of ncclient
@@ -109,6 +140,8 @@ class FakeSSHConnection:
     def __init__(self):
         self.get_transport = FakeGetTransport
 
+    def close(self):
+        pass
 
 class FakeGetTransport:
     @staticmethod
