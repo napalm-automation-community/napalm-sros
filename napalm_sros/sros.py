@@ -98,7 +98,7 @@ class NokiaSROSDriver(NetworkDriver):
             "state_ns": "urn:nokia.com:sros:ns:yang:sr:state",
             "configure_ns": "urn:nokia.com:sros:ns:yang:sr:conf",
         }
-        self.optional_args = None
+        self.optional_args = optional_args
 
     def open(self):
         """Implement the NAPALM method open (mandatory)"""
@@ -358,8 +358,7 @@ class NokiaSROSDriver(NetworkDriver):
         so there is no need for you to do it.
         """
 
-        if self.optional_args is None:
-            self.optional_args = {"json_format": False}
+        json_format = self.optional_args.get("json_format", False)
 
         buff = ""
         if self.fmt == "text":
@@ -374,16 +373,16 @@ class NokiaSROSDriver(NetworkDriver):
 
             running_dict = xmltodict.parse(
                 self.get_config(retrieve="running")["running"],
-                process_namespaces=not self.optional_args["json_format"],
+                process_namespaces=not json_format,
             )
             # candidate_dict = xmltodict.parse(candidate_config, process_namespaces=True)
             candidate_dict = xmltodict.parse(
                 self.get_config(retrieve="candidate")["candidate"],
-                process_namespaces=not self.optional_args["json_format"],
+                process_namespaces=not json_format,
             )
             new_buff = ""
             result = diff(running_dict, candidate_dict)
-            if self.optional_args["json_format"]:
+            if json_format:
                 new_buff += "\n".join(
                     [json.dumps(e, sort_keys=True, indent=4) for e in result]
                 )
@@ -1099,7 +1098,6 @@ class NokiaSROSDriver(NetworkDriver):
                 The rest will be set to “”.
                 full (bool) – Retrieve all the configuration. For instance, on ios, “sh run all”.
                 sanitized(bool) - Remove secret data . Default is false
-                optional_args - To define the format
             Returns:
                 running(string) - Representation of the native running configuration
                 candidate(string) - Representation of the native candidate configuration.
@@ -1113,9 +1111,8 @@ class NokiaSROSDriver(NetworkDriver):
         """
         try:
             configuration = {"running": "", "candidate": "", "startup": ""}
-            if self.optional_args is None:
-                self.optional_args = {"format": "xml"}
-            if self.optional_args["format"] == "cli" and (sanitized is True or sanitized is False):
+            format = self.optional_args.get("format", "xml")
+            if format == "cli" and (sanitized is True or sanitized is False):
                 # Getting output in MD-CLI format
                 # retrieving config using md-cli
                 cmd_running = "admin show configuration | no-more"
@@ -1178,7 +1175,7 @@ class NokiaSROSDriver(NetworkDriver):
                     return configuration
 
             # returning the config in xml format
-            elif self.optional_args["format"] == "xml" and (sanitized is True or sanitized is False):
+            elif format == "xml" and (sanitized is True or sanitized is False):
                 config_data_running_xml = ""
                 if retrieve == "running" or retrieve == "all":
                     config_data_running = to_ele(
@@ -4225,4 +4222,3 @@ class NokiaSROSDriver(NetworkDriver):
         except Exception as e:
             print("Error in method cli : {}".format(e))
             log.error("Error in method cli : %s" % traceback.format_exc())
-
