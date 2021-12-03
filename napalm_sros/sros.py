@@ -85,6 +85,8 @@ class NokiaSROSDriver(NetworkDriver):
 
         if optional_args is None:
             optional_args = {}
+        self.sros_get_format = optional_args.get("sros_get_format", "xml")
+        self.sros_compare_format = optional_args.get("sros_compare_format", "json")
         self.port = optional_args.get("port", 830)
         self.conn_ssh = optional_args.get("ssh_conn", None)
         self.ssh_channel = optional_args.get("ssh_channel", None)
@@ -98,7 +100,6 @@ class NokiaSROSDriver(NetworkDriver):
             "state_ns": "urn:nokia.com:sros:ns:yang:sr:state",
             "configure_ns": "urn:nokia.com:sros:ns:yang:sr:conf",
         }
-        self.optional_args = None
 
     def open(self):
         """Implement the NAPALM method open (mandatory)"""
@@ -358,9 +359,6 @@ class NokiaSROSDriver(NetworkDriver):
         so there is no need for you to do it.
         """
 
-        if self.optional_args is None:
-            self.optional_args = {"json_format": False}
-
         buff = ""
         if self.fmt == "text":
             buff = self._perform_cli_commands(
@@ -374,16 +372,16 @@ class NokiaSROSDriver(NetworkDriver):
 
             running_dict = xmltodict.parse(
                 self.get_config(retrieve="running")["running"],
-                process_namespaces=not self.optional_args["json_format"],
+                process_namespaces=self.sros_compare_format != "json",
             )
             # candidate_dict = xmltodict.parse(candidate_config, process_namespaces=True)
             candidate_dict = xmltodict.parse(
                 self.get_config(retrieve="candidate")["candidate"],
-                process_namespaces=not self.optional_args["json_format"],
+                process_namespaces=self.sros_compare_format != "json",
             )
             new_buff = ""
             result = diff(running_dict, candidate_dict)
-            if self.optional_args["json_format"]:
+            if self.sros_compare_format == "json":
                 new_buff += "\n".join(
                     [json.dumps(e, sort_keys=True, indent=4) for e in result]
                 )
@@ -1113,9 +1111,7 @@ class NokiaSROSDriver(NetworkDriver):
         """
         try:
             configuration = {"running": "", "candidate": "", "startup": ""}
-            if self.optional_args is None:
-                self.optional_args = {"format": "xml"}
-            if self.optional_args["format"] == "cli" and (sanitized is True or sanitized is False):
+            if self.sros_get_format == "cli" and (sanitized is True or sanitized is False):
                 # Getting output in MD-CLI format
                 # retrieving config using md-cli
                 cmd_running = "admin show configuration | no-more"
@@ -1178,7 +1174,7 @@ class NokiaSROSDriver(NetworkDriver):
                     return configuration
 
             # returning the config in xml format
-            elif self.optional_args["format"] == "xml" and (sanitized is True or sanitized is False):
+            elif self.sros_get_format == "xml" and (sanitized is True or sanitized is False):
                 config_data_running_xml = ""
                 if retrieve == "running" or retrieve == "all":
                     config_data_running = to_ele(
