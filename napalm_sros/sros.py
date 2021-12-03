@@ -100,6 +100,7 @@ class NokiaSROSDriver(NetworkDriver):
             "state_ns": "urn:nokia.com:sros:ns:yang:sr:state",
             "configure_ns": "urn:nokia.com:sros:ns:yang:sr:conf",
         }
+        self.optional_args = None
 
     def open(self):
         """Implement the NAPALM method open (mandatory)"""
@@ -358,7 +359,6 @@ class NokiaSROSDriver(NetworkDriver):
         configuration. The running_config is loaded automatically just before doing the comparison
         so there is no need for you to do it.
         """
-
         buff = ""
         if self.fmt == "text":
             buff = self._perform_cli_commands(
