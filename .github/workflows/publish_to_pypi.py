@@ -1,4 +1,4 @@
-name: Publish napalm-sros release to PyPI
+name: Publish release to PyPI
 
 on:
   release:
