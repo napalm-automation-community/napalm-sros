@@ -9,6 +9,11 @@ from napalm.base.test.double import BaseTestDouble
 
 from napalm_sros import sros
 
+@pytest.fixture(scope="session", autouse=True)
+def setenv():
+    # Set timezone such that mock link_flap timestamps are generated correctly
+    import os
+    os.environ["TZ"] = "GMT"
 
 @pytest.fixture(scope="class")
 def set_device_parameters(request):
@@ -171,5 +176,3 @@ class FakeSSHConnectionChannel(BaseTestDouble):
         response_string = self.read_txt_file(filepath)
         response_string = response_string.ljust(len(response_string) + 1, " ")
         return str.encode(response_string)
-
-
