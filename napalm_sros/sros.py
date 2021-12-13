@@ -785,7 +785,7 @@ class NokiaSROSDriver(NetworkDriver):
                 )
                 ifd["last_flapped"] = (
                     datetime.datetime.strptime(
-                        flap_time, "%Y-%m-%dT%H:%M:%S.%fZ"
+                        flap_time, "%Y-%m-%dT%H:%M:%S.%f%z"
                     ).timestamp()
                     if flap_time != ""
                     else -1.0
