@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="napalm-sros",
-    version="1.0.0",
+    version="1.0.1",
     packages=find_packages(),
     author="Nokia",
     author_email="",
@@ -23,7 +23,7 @@ setup(
         "pytest>=5.4.3",
         "textfsm>=1.1.0",
         "paramiko>=2.7.1",
-        "lxml>=4.6.2",
+        "lxml>=4.6.4",
         "ncclient>=0.6.7",
         "xmltodict>=0.12.0",
         "dictdiffer>=0.9.0",
