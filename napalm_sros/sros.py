@@ -31,6 +31,9 @@ import xmltodict
 from dictdiffer import diff
 import paramiko
 
+# Fix an issue with timezone processing in Python 3.6
+from dateutil.parser import parse as dateutil_parse
+
 # import NAPALM libraries
 
 from lxml import etree
@@ -784,13 +787,12 @@ class NokiaSROSDriver(NetworkDriver):
                     if_state, "state_ns:last-oper-change", namespaces=self.nsmap
                 )
                 ifd["last_flapped"] = (
-                    datetime.datetime.strptime(
-                        flap_time, "%Y-%m-%dT%H:%M:%S.%fZ"
-                    ).timestamp()
-                    if flap_time != ""
-                    else -1.0
+                    # This has an issue with the timezone, fixed in Python 3.7
+                    #datetime.datetime.strptime(
+                    #    flap_time, "%Y-%m-%dT%H:%M:%S.%fZ"
+                    #).timestamp()
+                    dateutil_parse(flap_time).timestamp() if flap_time != "" else -1.0
                 )
-
                 ifd["mtu"] = convert(
                     int,
                     self._find_txt(if_state, "state_ns:oper-ip-mtu", namespaces=self.nsmap),
@@ -4221,4 +4223,3 @@ class NokiaSROSDriver(NetworkDriver):
         except Exception as e:
             print("Error in method cli : {}".format(e))
             log.error("Error in method cli : %s" % traceback.format_exc())
-

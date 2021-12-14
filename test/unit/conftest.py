@@ -1,7 +1,6 @@
 """Test fixtures."""
 
 import pytest
-import os
 from lxml import etree
 
 from napalm.base.test import conftest as parent_conftest
@@ -9,11 +8,6 @@ from napalm.base.test import conftest as parent_conftest
 from napalm.base.test.double import BaseTestDouble
 
 from napalm_sros import sros
-
-@pytest.fixture(scope="session", autouse=True)
-def setenv():
-    # Set timezone such that mock link_flap timestamps are generated correctly
-    os.environ["TZ"] = "GMT"
 
 @pytest.fixture(scope="class")
 def set_device_parameters(request):
