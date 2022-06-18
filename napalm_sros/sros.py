@@ -74,9 +74,9 @@ class NokiaSROSDriver(NetworkDriver):
         self.locked = False
         self.terminal_stdout_re = [
             re.compile(
-                "[\r\n]*\!?\*?(\((ex|gl|pr|ro)\))?\[.*\][\r\n]+[ABCD]\:\S+\@\S+\#\s$"
+                "[\r\n]*\\!?\\*?(\\((ex|gl|pr|ro)\\))?\\[.*\\][\r\n]+[ABCD]\\:\\S+\\@\\S+\\#\\s$"
             ),
-            re.compile("[\r\n]*\*?[ABCD]:[\w\-\.\,\>]+[#\$]\s"),
+            re.compile("[\r\n]*\\*?[ABCD]:[\\w\\-\\.\\,\\>]+[#\\$]\\s"),
         ]
         self.terminal_stderr_re = [
             re.compile("Error: .*[\r\n]+"),
@@ -318,7 +318,7 @@ class NokiaSROSDriver(NetworkDriver):
             buff = self._perform_cli_commands(["commit"], True)
             # If error while performing commit, return the error
             error = ""
-            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#\s")
+            cmd_line_pattern = re.compile("\\*?(.*?)(>.*)*#\\s")
             for item in buff.split("\n"):
                 if cmd_line_pattern.search(item):
                     continue
@@ -364,7 +364,7 @@ class NokiaSROSDriver(NetworkDriver):
             buff = self._perform_cli_commands(
                 ["environment more false", "compare"], True
             )
-            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
+            cmd_line_pattern = re.compile("\\*?(.*?)(>.*)*#.*?")
             # buff = self._perform_cli_commands(["environment more false", "compare"])
         else:
             #  if format is xml we convert them into dict and perform a diff on configs to return the difference
@@ -1125,7 +1125,7 @@ class NokiaSROSDriver(NetworkDriver):
                     else:
                         updated_buff = [buff]
                     new_buff = ""
-                    cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
+                    cmd_line_pattern = re.compile("\\*?(.*?)(>.*)*#.*?")
                     match_strings = [
                         cmd_candidate[0],
                         cmd_candidate[1],
@@ -1187,7 +1187,7 @@ class NokiaSROSDriver(NetworkDriver):
                     )
                     # remove xml declaration
                     config_data_running_xml = re.sub(
-                        "<\?xml.*\?>", "", config_data_running_xml
+                        "<\\?xml.*\\?>", "", config_data_running_xml
                     )
                     configuration["running"] = config_data_running_xml
 
@@ -1204,7 +1204,7 @@ class NokiaSROSDriver(NetworkDriver):
                         )[0]
                     )
                     config_data_candidate_xml = re.sub(
-                        "<\?xml.*\?>", "", config_data_candidate_xml
+                        "<\\?xml.*\\?>", "", config_data_candidate_xml
                     )
                     configuration["candidate"] = config_data_candidate_xml
                 return configuration
@@ -1582,7 +1582,7 @@ class NokiaSROSDriver(NetworkDriver):
             # helper method
             def _get_ntp_stats_data(buff):
                 ip_pattern = re.compile(
-                    "(([2][5][0-5]\.)|([2][0-4][0-9]\.)|([0-1]?[0-9]?[0-9]\.)){3}"
+                    "(([2][5][0-5]\\.)|([2][0-4][0-9]\\.)|([0-1]?[0-9]?[0-9]\\.)){3}"
                     + "(([2][5][0-5])|([2][0-4][0-9])|([0-1]?[0-9]?[0-9]))"
                 )
                 dashed_row = False
@@ -2126,7 +2126,7 @@ class NokiaSROSDriver(NetworkDriver):
                 )
 
             ip_pattern = re.compile(
-                "(([2][5][0-5]\.)|([2][0-4][0-9]\.)|([0-1]?[0-9]?[0-9]\.)){3}"
+                "(([2][5][0-5]\\.)|([2][0-4][0-9]\\.)|([0-1]?[0-9]?[0-9]\\.)){3}"
                 + "(([2][5][0-5])|([2][0-4][0-9])|([0-1]?[0-9]?[0-9]))"
             )
 
@@ -3857,7 +3857,7 @@ class NokiaSROSDriver(NetworkDriver):
                     total_power_modules = total_power_modules + 1
                 if "Current Util." in item:
                     row = item.strip()
-                    watts = re.match("^.*:\s*(\d+[.]\d+) Watts.*$", item)
+                    watts = re.match("^.*:\\s*(\\d+[.]\\d+) Watts.*$", item)
                     if watts:
                         output = float(watts.groups()[0])
 
@@ -3992,7 +3992,7 @@ class NokiaSROSDriver(NetworkDriver):
                 cmd = ["environment more false", f"show router {name} neighbor"]
                 buff = self._perform_cli_commands(cmd, True)
                 ipv6_address_regex = re.compile(
-                    "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
+                    "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
                 )
                 prev_row = ""
                 ip_address = ""
@@ -4204,7 +4204,7 @@ class NokiaSROSDriver(NetworkDriver):
             for cmd in commands:
                 buff = self._perform_cli_commands([cmd], True)
                 new_buff = ""
-                cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#\s")
+                cmd_line_pattern = re.compile("\\*?(.*?)(>.*)*#\\s")
                 for item in buff.split("\n"):
                     if "[]" in item:
                         continue
@@ -4221,4 +4221,3 @@ class NokiaSROSDriver(NetworkDriver):
         except Exception as e:
             print("Error in method cli : {}".format(e))
             log.error("Error in method cli : %s" % traceback.format_exc())
-
