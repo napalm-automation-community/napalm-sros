@@ -1,32 +1,75 @@
 {
-    "global": {
-        "router_id": "1.1.1.1",
-        "peers": {
-            "1.1.0.1": {
-                "remote_id": "0.0.0.0",
-                "is_enabled": true,
-                "is_up": false,
-                "uptime": 1199816,
-                "address_family": {
-                    "ipv4": {
-                        "sent_prefixes": 0,
-                        "received_prefixes": 0,
-                        "accepted_prefixes": 0
-                    },
-                    "ipv6": {
-                        "sent_prefixes": 0,
-                        "received_prefixes": 0,
-                        "accepted_prefixes": 0
-                    }
-                },
-                "description": "",
-                "local_as": 65000,
-                "remote_as": 65101
-            }
+  "global": {
+    "router_id": "10.0.0.2",
+    "peers": {
+      "80.81.192.10": {
+        "local_as": 12552,
+        "remote_as": 13414,
+        "remote_id": "10.0.0.3",
+        "is_up": true,
+        "is_enabled": true,
+        "description": "Twitter",
+        "uptime": 4036,
+        "address_family": {
+          "ipv4": {
+            "received_prefixes": 1,
+            "accepted_prefixes": 1,
+            "sent_prefixes": 3
+          },
+          "ipv6": {
+            "received_prefixes": 0,
+            "accepted_prefixes": 0,
+            "sent_prefixes": 0
+          }
         }
-    },
-    "2100": {
-        "router_id": "1.1.1.1",
-        "peers": {}
+      },
+      "2001:7f8::3466:0:1": {
+        "local_as": 12552,
+        "remote_as": 13414,
+        "remote_id": "10.0.0.3",
+        "is_up": true,
+        "is_enabled": true,
+        "description": "Twitter",
+        "uptime": 4036,
+        "address_family": {
+          "ipv4": {
+            "received_prefixes": 0,
+            "accepted_prefixes": 0,
+            "sent_prefixes": 0
+          },
+          "ipv6": {
+            "received_prefixes": 0,
+            "accepted_prefixes": 0,
+            "sent_prefixes": 1
+          }
+        }
+      }
     }
+  },
+  "test": {
+    "router_id": "10.0.0.2",
+    "peers": {
+      "10.1.0.2": {
+        "local_as": 12552,
+        "remote_as": 13414,
+        "remote_id": "10.0.0.3",
+        "is_up": true,
+        "is_enabled": true,
+        "description": "Twitter",
+        "uptime": 26957,
+        "address_family": {
+          "ipv4": {
+            "received_prefixes": 0,
+            "accepted_prefixes": 0,
+            "sent_prefixes": 1
+          },
+          "ipv6": {
+            "received_prefixes": 0,
+            "accepted_prefixes": 0,
+            "sent_prefixes": 0
+          }
+        }
+      }
+    }
+  }
 }

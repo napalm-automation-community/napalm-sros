@@ -1,37 +1,63 @@
-<data xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
+<data>
+    <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf" xmlns:nokia-attr="urn:nokia.com:sros:ns:yang:sr:attributes">
         <router>
             <router-name>Base</router-name>
-            <autonomous-system>65000</autonomous-system>
+            <autonomous-system>12552</autonomous-system>
             <bgp>
                 <neighbor>
-                    <ip-address>1.1.0.1</ip-address>
+                    <ip-address>80.81.192.10</ip-address>
                     <admin-state>enable</admin-state>
-                    <peer-as>65101</peer-as>
+                    <description>Twitter</description>
+                    <peer-as>13414</peer-as>
+                    <local-as>
+                    </local-as>
+                </neighbor>
+                <neighbor>
+                    <ip-address>2001:7f8::3466:0:1</ip-address>
+                    <admin-state>enable</admin-state>
+                    <description>Twitter</description>
+                    <peer-as>13414</peer-as>
                     <local-as>
                     </local-as>
                 </neighbor>
             </bgp>
         </router>
+        <router>
+            <router-name>management</router-name>
+        </router>
         <service>
+            <vprn>
+                <service-name>test</service-name>
+                <autonomous-system>12552</autonomous-system>
+                <bgp>
+                    <neighbor>
+                        <ip-address>10.1.0.2</ip-address>
+                        <admin-state>enable</admin-state>
+                        <description>Twitter</description>
+                        <peer-as>13414</peer-as>
+                        <local-as>
+                        </local-as>
+                    </neighbor>
+                </bgp>
+            </vprn>
         </service>
     </configure>
     <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
         <router>
             <router-name>Base</router-name>
-            <oper-router-id>1.1.1.1</oper-router-id>
+            <oper-router-id>10.0.0.2</oper-router-id>
             <bgp>
                 <neighbor>
-                    <ip-address>1.1.0.1</ip-address>
+                    <ip-address>80.81.192.10</ip-address>
                     <statistics>
-                        <session-state>Connect</session-state>
-                        <peer-identifier>0.0.0.0</peer-identifier>
-                        <last-established-time>2020-06-22T01:47:35.0Z</last-established-time>
+                        <session-state>Established</session-state>
+                        <peer-identifier>10.0.0.3</peer-identifier>
+                        <last-established-time>2022-10-12T01:07:50.6Z</last-established-time>
                         <family-prefix>
                             <ipv4>
-                                <received>0</received>
-                                <active>0</active>
-                                <sent>0</sent>
+                                <received>1</received>
+                                <active>1</active>
+                                <sent>3</sent>
                             </ipv4>
                             <ipv6>
                                 <received>0</received>
@@ -41,16 +67,58 @@
                         </family-prefix>
                     </statistics>
                 </neighbor>
+                <neighbor>
+                    <ip-address>2001:7f8::3466:0:1</ip-address>
+                    <statistics>
+                        <session-state>Established</session-state>
+                        <peer-identifier>10.0.0.3</peer-identifier>
+                        <last-established-time>2022-10-12T01:07:50.6Z</last-established-time>
+                        <family-prefix>
+                            <ipv4>
+                                <received>0</received>
+                                <active>0</active>
+                                <sent>0</sent>
+                            </ipv4>
+                            <ipv6>
+                                <received>0</received>
+                                <active>0</active>
+                                <sent>1</sent>
+                            </ipv6>
+                        </family-prefix>
+                    </statistics>
+                </neighbor>
             </bgp>
         </router>
         <service>
             <vprn>
-                <service-name>2100</service-name>
-                <oper-router-id>1.1.1.1</oper-router-id>
+                <service-name>test</service-name>
+                <oper-router-id>10.0.0.2</oper-router-id>
+                <bgp>
+                    <neighbor>
+                        <ip-address>10.1.0.2</ip-address>
+                        <statistics>
+                            <session-state>Established</session-state>
+                            <peer-identifier>10.0.0.3</peer-identifier>
+                            <last-established-time>2022-10-11T18:45:49.6Z</last-established-time>
+                            <family-prefix>
+                                <ipv4>
+                                    <received>0</received>
+                                    <active>0</active>
+                                    <sent>1</sent>
+                                </ipv4>
+                                <ipv6>
+                                    <received>0</received>
+                                    <active>0</active>
+                                    <sent>0</sent>
+                                </ipv6>
+                            </family-prefix>
+                        </statistics>
+                    </neighbor>
+                </bgp>
             </vprn>
         </service>
         <system>
-            <current-time>2020-07-05T23:04:31.4Z</current-time>
+            <current-time>2022-10-12T02:15:06.6Z</current-time>
         </system>
     </state>
 </data>
