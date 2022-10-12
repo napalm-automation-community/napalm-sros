@@ -54,8 +54,9 @@ from napalm_sros.utils.parse_output_to_dict import parse_with_textfsm
 from napalm_sros.nc_filters import *
 from napalm_sros.utils.utils import init_logging
 
-log = init_logging()
+from .api import get_bgp_neighbors,get_bgp_neighbors_detail
 
+log = init_logging()
 
 class NokiaSROSDriver(NetworkDriver):
     """Napalm driver for Skeleton."""
@@ -617,7 +618,7 @@ class NokiaSROSDriver(NetworkDriver):
                is_enabled (True/False)
                description (string)
                last_flapped (float in seconds)
-               speed (int in Mbit)
+               speed (float in Mbit)
                MTU (in Bytes)
                mac_address (string)
          """
@@ -646,7 +647,7 @@ class NokiaSROSDriver(NetworkDriver):
                     else False
                 )
                 pd["speed"] = convert(
-                    int,
+                    float,
                     self._find_txt(
                         port, "state_ns:ethernet/state_ns:oper-speed", namespaces=self.nsmap
                     ),
@@ -758,11 +759,11 @@ class NokiaSROSDriver(NetworkDriver):
                 ifd["mac_address"] = if_mac
 
                 # speed is a port inherited value
-                if_speed = -1  # default value for system/loopback interface
+                if_speed = -1.0  # default value for system/loopback interface
                 if if_port:
                     if if_port_state_block is not None and len(if_port_state_block) > 0:
                         if_speed = convert(
-                            int,
+                            float,
                             self._find_txt(
                                 if_port_state_block,
                                 "state_ns:ethernet/state_ns:oper-speed",
@@ -2510,246 +2511,11 @@ class NokiaSROSDriver(NetworkDriver):
                 uptime of the last active BGP session.
         """
         try:
-            bgp_neighbors = {}
-            current_time = ""
-
-            # helper functions
-
-            def _build_prefix_limit(peer_xml):
-                prefix_limit = {}
-                for pl in peer_xml.xpath(
-                    "state_ns:statistics/state_ns:family-prefix", namespaces=self.nsmap
-                ):
-                    prefix_limit.update(
-                        {
-                            "ipv4": {
-                                "sent_prefixes": convert(
-                                    int,
-                                    self._find_txt(
-                                        pl,
-                                        "state_ns:ipv4/state_ns:sent",
-                                        namespaces=self.nsmap,
-                                    ),
-                                ),
-                                "received_prefixes": convert(
-                                    int,
-                                    self._find_txt(
-                                        pl,
-                                        "state_ns:ipv4/state_ns:received",
-                                        namespaces=self.nsmap,
-                                    ),
-                                ),
-                                "accepted_prefixes": convert(
-                                    int,
-                                    self._find_txt(
-                                        pl,
-                                        "state_ns:ipv4/state_ns:active",
-                                        namespaces=self.nsmap,
-                                    ),
-                                ),
-                            }
-                        }
-                    )
-                    prefix_limit.update(
-                        {
-                            "ipv6": {
-                                "sent_prefixes": convert(
-                                    int,
-                                    self._find_txt(
-                                        pl,
-                                        "state_ns:ipv6/state_ns:sent",
-                                        namespaces=self.nsmap,
-                                    ),
-                                ),
-                                "received_prefixes": convert(
-                                    int,
-                                    self._find_txt(
-                                        pl,
-                                        "state_ns:ipv6/state_ns:received",
-                                        namespaces=self.nsmap,
-                                    ),
-                                ),
-                                "accepted_prefixes": convert(
-                                    int,
-                                    self._find_txt(
-                                        pl,
-                                        "state_ns:ipv6/state_ns:active",
-                                        namespaces=self.nsmap,
-                                    ),
-                                ),
-                            }
-                        },
-                    )
-                return prefix_limit
-
-            def _build_state_neighbor(instance_name, instance_id):
-                if instance_name == "Base":
-                    instance_name = "global"
-                bgp_neighbors.update(
-                    {instance_name: {"router_id": instance_id, "peers": {}}}
-                )
-                for bgp_neighbor in instance.xpath(
-                    "state_ns:bgp/state_ns:neighbor", namespaces=self.nsmap
-                ):
-                    ip_address = self._find_txt(
-                        bgp_neighbor, "state_ns:ip-address", namespaces=self.nsmap
-                    )
-                    remote_id = self._find_txt(
-                        bgp_neighbor,
-                        "state_ns:statistics/state_ns:peer-identifier",
-                        namespaces=self.nsmap,
-                    )
-                    is_up = (
-                        True
-                        if self._find_txt(
-                            bgp_neighbor,
-                            "state_ns:statistics/state_ns:session-state",
-                            namespaces=self.nsmap,
-                        ).lower()
-                        == "established"
-                        else False
-                    )
-                    last_established_time = self._find_txt(
-                        bgp_neighbor,
-                        "state_ns:statistics/state_ns:last-established-time",
-                        namespaces=self.nsmap,
-                    )
-                    if last_established_time:
-                        last_established_time = last_established_time[:-1]
-                        last_established_time = (
-                            datetime.datetime.strptime(
-                                last_established_time, "%Y-%m-%dT%H:%M:%S.%f"
-                            )
-                        ).timestamp()
-                    uptime = 0
-                    if current_time and last_established_time:
-                        uptime = current_time - last_established_time
-
-                    bgp_neighbors[instance_name]["peers"].update(
-                        {
-                            ip_address: {
-                                "remote_id": remote_id,
-                                "is_up": is_up,
-                                "uptime": convert(int, uptime, default=0),
-                                "address_family": _build_prefix_limit(bgp_neighbor),
-                            }
-                        }
-                    )
-
-            def _build_config_neighbor():
-                for bgp_neighbor in instance.xpath(
-                    "configure_ns:bgp/configure_ns:neighbor", namespaces=self.nsmap
-                ):
-                    ip_address = self._find_txt(
-                        bgp_neighbor, "configure_ns:ip-address", namespaces=self.nsmap
-                    )
-                    type_ = self._find_txt(
-                        bgp_neighbor, "configure_ns:type", namespaces=self.nsmap
-                    )
-                    admin_state = self._find_txt(
-                        bgp_neighbor, "configure_ns:admin-state", namespaces=self.nsmap
-                    )
-                    description = self._find_txt(
-                        bgp_neighbor, "configure_ns:description", namespaces=self.nsmap
-                    )
-
-                    explicit_local_as = self._find_txt(
-                        bgp_neighbor,
-                        "configure_ns:local-as/configure_ns:as-number",
-                        namespaces=self.nsmap,
-                    )
-                    if explicit_local_as:
-                        local_as = explicit_local_as
-                    else:
-                        local_as = global_as
-
-                    explicit_peer_as = self._find_txt(
-                        bgp_neighbor, "configure_ns:peer-as", namespaces=self.nsmap
-                    )
-                    if explicit_peer_as:
-                        peer_as = explicit_peer_as
-                    elif type_ == "internal" and not explicit_peer_as:
-                        peer_as = global_as
-                    else:
-                        peer_as = 0
-
-                    for k, v in bgp_neighbors.items():
-                        if isinstance(v, dict):
-                            for key, val in v.items():
-                                if isinstance(val, dict):
-                                    for k1, v1 in val.items():
-                                        if k1 == ip_address:
-                                            v1.update(
-                                                {
-                                                    "is_enabled": True
-                                                    if admin_state == "enable"
-                                                    else False,
-                                                    "description": description,
-                                                    "local_as": as_number(local_as),
-                                                    "remote_as": as_number(peer_as),
-                                                }
-                                            )
-
-            result = to_ele(
-                self.conn.get(
-                    filter=GET_BGP_NEIGHBORS["_"], with_defaults="report-all"
-                ).data_xml
-            )
-
-            for system_time in result.xpath(
-                "state_ns:state/state_ns:system", namespaces=self.nsmap
-            ):
-                current_time = self._find_txt(
-                    system_time, "state_ns:current-time", namespaces=self.nsmap
-                )
-                if current_time == "":
-                    break
-                current_time = current_time[:-1]
-                current_time = (
-                    datetime.datetime.strptime(current_time, "%Y-%m-%dT%H:%M:%S.%f")
-                ).timestamp()
-
-            for instance in result.xpath(
-                "state_ns:state/state_ns:router", namespaces=self.nsmap
-            ):
-                router_name = self._find_txt(
-                    instance, "state_ns:router-name", namespaces=self.nsmap
-                )
-                router_id = self._find_txt(
-                    instance, "state_ns:oper-router-id", namespaces=self.nsmap
-                )
-                _build_state_neighbor(router_name, router_id)
-            for instance in result.xpath(
-                "state_ns:state/state_ns:service/state_ns:vprn", namespaces=self.nsmap
-            ):
-                service_name = self._find_txt(
-                    instance, "state_ns:service-name", namespaces=self.nsmap
-                )
-                vprn_id = self._find_txt(
-                    instance, "state_ns:oper-router-id", namespaces=self.nsmap
-                )
-                _build_state_neighbor(service_name, vprn_id)
-
-            for instance in result.xpath(
-                "configure_ns:configure/configure_ns:router", namespaces=self.nsmap
-            ):
-                global_as = self._find_txt(
-                    instance, "configure_ns:autonomous-system", namespaces=self.nsmap
-                )
-                _build_config_neighbor()
-            for instance in result.xpath(
-                "configure_ns:configure/configure_ns:service/configure_ns:vprn",
-                namespaces=self.nsmap,
-            ):
-                global_as = self._find_txt(
-                    instance, "configure_ns:autonomous-system", namespaces=self.nsmap
-                )
-                _build_config_neighbor()
-
-            return bgp_neighbors
+          return get_bgp_neighbors(self.conn)
         except Exception as e:
-            print("Error in method get bgp neighbors : {}".format(e))
-            log.error("Error in method get bgp neighbors : %s" % traceback.format_exc())
+          print(e)
+          log.error("Error in method get bgp neighbors : %s" % traceback.format_exc())
+          return {}
 
     def get_bgp_neighbors_detail(self, neighbor_address=""):
         """
@@ -2796,392 +2562,11 @@ class NokiaSROSDriver(NetworkDriver):
 
         """
         try:
-            bgp_neighbor_detail = {}
-
-            # helper functions
-
-            def _get_policies(policies_xml):
-                policies = [ele.text for ele in policies_xml]
-                return ", ".join(policies)
-
-            def _build_state_neighbor_details(instance_id):
-
-                for bgp_neighbor in instance.xpath(
-                    "state_ns:bgp/state_ns:neighbor", namespaces=self.nsmap
-                ):
-                    ip_address = self._find_txt(
-                        bgp_neighbor, "state_ns:ip-address", namespaces=self.nsmap
-                    )
-                    if neighbor_address:
-                        if ip_address != neighbor_address:
-                            continue
-                    session_state = self._find_txt(
-                        bgp_neighbor,
-                        "state_ns:statistics/state_ns:session-state",
-                        namespaces=self.nsmap,
-                    )
-                    active_ipv4 = convert(
-                        int,
-                        self._find_txt(
-                            bgp_neighbor,
-                            "state_ns:statistics/state_ns:family-prefix/state_ns:ipv4/state_ns:active",
-                            namespaces=self.nsmap,
-                        ),
-                    )
-                    suppressed_ipv4 = convert(
-                        int,
-                        self._find_txt(
-                            bgp_neighbor,
-                            "state_ns:statistics/state_ns:family-prefix/state_ns:ipv4/state_ns:suppressed",
-                            namespaces=self.nsmap,
-                        ),
-                    )
-                    advertised_ipv4 = convert(
-                        int,
-                        self._find_txt(
-                            bgp_neighbor,
-                            "state_ns:statistics/state_ns:family-prefix/state_ns:ipv4/state_ns:sent",
-                            namespaces=self.nsmap,
-                        ),
-                    )
-                    received_ipv4 = convert(
-                        int,
-                        self._find_txt(
-                            bgp_neighbor,
-                            "state_ns:statistics/state_ns:family-prefix/state_ns:ipv4/state_ns:received",
-                            namespaces=self.nsmap,
-                        ),
-                    )
-                    neighbor_details = {
-                        "router_id": instance_id,
-                        "up": True if session_state.lower() == "established" else False,
-                        "connection_state": session_state,
-                        "previous_connection_state": self._find_txt(
-                            bgp_neighbor,
-                            "state_ns:statistics/state_ns:last-state",
-                            namespaces=self.nsmap,
-                        ),
-                        "last_event": self._find_txt(
-                            bgp_neighbor,
-                            "state_ns:statistics/state_ns:last-event",
-                            namespaces=self.nsmap,
-                        ),
-                        "local_port": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:local-port",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "remote_port": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:peer-port",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "remote_address": self._find_txt(
-                            bgp_neighbor,
-                            "state_ns:statistics/state_ns:peer-identifier",
-                            namespaces=self.nsmap,
-                        ),
-                        "configured_keepalive": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:keep-alive-interval",
-                                namespaces=self.nsmap,
-                            ),
-                            default=-1,
-                        ),
-                        "flap_count": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:number-of-update-flaps",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "input_messages": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:received/state_ns:messages",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "output_messages": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:sent/state_ns:messages",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "input_updates": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:received/state_ns:updates",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "output_updates": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:sent/state_ns:updates",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "messages_queued_out": convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:sent/state_ns:queues",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "active_prefix_count": active_ipv4
-                        if active_ipv4
-                        else convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:family-prefix/state_ns:ipv6/state_ns:active",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "suppressed_prefix_count": suppressed_ipv4
-                        if suppressed_ipv4
-                        else convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:family-prefix/state_ns:ipv6/state_ns:suppressed",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "advertised_prefix_count": advertised_ipv4
-                        if advertised_ipv4
-                        else convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:family-prefix/state_ns:ipv6/state_ns:sent",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "received_prefix_count": received_ipv4
-                        if received_ipv4
-                        else convert(
-                            int,
-                            self._find_txt(
-                                bgp_neighbor,
-                                "state_ns:statistics/state_ns:family-prefix/state_ns:ipv6/state_ns:received",
-                                namespaces=self.nsmap,
-                            ),
-                        ),
-                        "accepted_prefix_count": -1,  # SROS does not have accepted prefixes
-                    }
-                    for k, v in bgp_neighbor_detail.items():
-                        if isinstance(v, dict):
-                            for key, val in v.items():
-                                if isinstance(val, list):
-                                    for dictionary in val:
-                                        dictionary.update(neighbor_details)
-
-            def _build_config_neighbor_details(choice="", global_autonomous=""):
-                instance_name = ""
-                if choice == "router":
-                    instance_name = self._find_txt(
-                        instance, "configure_ns:router-name", namespaces=self.nsmap
-                    )
-                elif choice == "vprn":
-                    instance_name = self._find_txt(
-                        instance, "configure_ns:service-name", namespaces=self.nsmap
-                    )
-
-                for bgp_neighbor in instance.xpath(
-                    "configure_ns:bgp/configure_ns:neighbor", namespaces=self.nsmap
-                ):
-                    ip_address = self._find_txt(
-                        bgp_neighbor, "configure_ns:ip-address", namespaces=self.nsmap
-                    )
-                    if neighbor_address:
-                        if ip_address != neighbor_address:
-                            continue
-                    type_ = self._find_txt(
-                        bgp_neighbor, "configure_ns:type", namespaces=self.nsmap
-                    )
-
-                    explicit_peer_as = self._find_txt(
-                        bgp_neighbor, "configure_ns:peer-as", namespaces=self.nsmap
-                    )
-                    if explicit_peer_as:
-                        peer_as = explicit_peer_as
-                    elif type_ == "internal" and not explicit_peer_as:
-                        peer_as = global_autonomous
-                    else:
-                        peer_as = 0
-                    bgp_neighbor_detail.update({instance_name: {as_number(peer_as): []}})
-
-                    explicit_local_as = self._find_txt(
-                        bgp_neighbor,
-                        "configure_ns:local-as/configure_ns:as-number",
-                        namespaces=self.nsmap,
-                    )
-                    if explicit_local_as:
-                        local_as = explicit_local_as
-                    else:
-                        local_as = global_autonomous
-                    local_address = self._find_txt(
-                        bgp_neighbor, "configure_ns:local-address", namespaces=self.nsmap
-                    )
-                    bgp_neighbor_detail[instance_name][as_number(peer_as)].append(
-                        {
-                            "local_address": local_address,
-                            "local_address_configured": True
-                            if local_address == ""
-                            else False,
-                            "local_as": as_number(local_as),
-                            "remote_as": as_number(peer_as),
-                            "local_as_prepend": True
-                            if self._find_txt(
-                                bgp_neighbor,
-                                "configure_ns:local-as/configure_ns:prepend-global-as",
-                                namespaces=self.nsmap,
-                            ).lower()
-                            == "true"
-                            else False,
-                            "multihop": True
-                            if convert(
-                                int,
-                                self._find_txt(
-                                    bgp_neighbor,
-                                    "configure_ns:multihop",
-                                    namespaces=self.nsmap,
-                                ),
-                                default=-1,
-                            )
-                            > 0
-                            else False,
-                            "multipath": True
-                            if self._find_txt(
-                                bgp_neighbor,
-                                "configure_ns:multipath-eligible",
-                                namespaces=self.nsmap,
-                            )
-                            == "true"
-                            else False,
-                            "suppress_4byte_as": True
-                            if not convert(
-                                bool,
-                                self._find_txt(
-                                    bgp_neighbor,
-                                    "configure_ns:asn-4-byte",
-                                    namespaces=self.nsmap,
-                                ),
-                            )
-                            else False,
-                            "keepalive": convert(
-                                int,
-                                self._find_txt(
-                                    bgp_neighbor,
-                                    "configure_ns:keepalive",
-                                    namespaces=self.nsmap,
-                                ),
-                                default=-1,
-                            ),
-                            "remove_private_as": True
-                            if self._find_txt(
-                                bgp_neighbor,
-                                "configure_ns:remove-private/configure_ns:limited",
-                                namespaces=self.nsmap,
-                            )
-                            == "true"
-                            else False,
-                            "holdtime": convert(
-                                int,
-                                self._find_txt(
-                                    bgp_neighbor,
-                                    "configure_ns:hold-time/configure_ns:seconds",
-                                    namespaces=self.nsmap,
-                                ),
-                                default=-1,
-                            ),
-                            "configured_holdtime": convert(
-                                int,
-                                self._find_txt(
-                                    bgp_neighbor,
-                                    "configure_ns:hold-time/configure_ns:minimum-hold-time",
-                                    namespaces=self.nsmap,
-                                ),
-                                default=-1,
-                            ),
-                            "import_policy": _get_policies(
-                                bgp_neighbor.xpath(
-                                    "configure_ns:import/configure_ns:policy",
-                                    namespaces=self.nsmap,
-                                )
-                            ),
-                            "export_policy": _get_policies(
-                                bgp_neighbor.xpath(
-                                    "configure_ns:export/configure_ns:policy",
-                                    namespaces=self.nsmap,
-                                )
-                            ),
-                            "routing_table": self._find_txt(
-                                bgp_neighbor, "configure_ns:group", namespaces=self.nsmap
-                            ),
-                        }
-                    )
-
-            result = to_ele(
-                self.conn.get(
-                    filter=GET_BGP_NEIGHBORS_DETAILS["_"].format(
-                        neighbor_address=neighbor_address
-                    ),
-                    with_defaults="report-all",
-                ).data_xml
-            )
-
-            for instance in result.xpath(
-                "configure_ns:configure/configure_ns:router", namespaces=self.nsmap
-            ):
-                global_as = self._find_txt(
-                    instance, "configure_ns:autonomous-system", namespaces=self.nsmap
-                )
-                _build_config_neighbor_details(choice="router", global_autonomous=global_as)
-            for instance in result.xpath(
-                "configure_ns:configure/configure_ns:service/configure_ns:vprn",
-                namespaces=self.nsmap,
-            ):
-                global_as = self._find_txt(
-                    instance, "configure_ns:autonomous-system", namespaces=self.nsmap
-                )
-                _build_config_neighbor_details(choice="vprn", global_autonomous=global_as)
-
-            for instance in result.xpath(
-                "state_ns:state/state_ns:router", namespaces=self.nsmap
-            ):
-                router_id = self._find_txt(
-                    instance, "state_ns:oper-router-id", namespaces=self.nsmap
-                )
-                _build_state_neighbor_details(router_id)
-            for instance in result.xpath(
-                "state_ns:state/state_ns:service/state_ns:vprn", namespaces=self.nsmap
-            ):
-                vprn_id = self._find_txt(
-                    instance, "state_ns:oper-router-id", namespaces=self.nsmap
-                )
-                _build_state_neighbor_details(vprn_id)
-            return bgp_neighbor_detail
+          return get_bgp_neighbors_detail(self.conn,neighbor_address)
         except Exception as e:
-            print("Error in method get bgp neighbor detail : {}".format(e))
-            log.error("Error in method get bgp neighbor detail : %s" % traceback.format_exc())
+          print(e)
+          log.error("Error in method get bgp neighbors detail : %s" % traceback.format_exc())
+          return {}
 
     def get_bgp_config(self, group="", neighbor=""):
         """
@@ -3847,6 +3232,7 @@ class NokiaSROSDriver(NetworkDriver):
                 [
                     "environment more false",
                     "show chassis power-management utilization detail",
+                    # JvB: on VSR this is 'power-supply'
                 ],
                 True,
             )
@@ -4221,4 +3607,3 @@ class NokiaSROSDriver(NetworkDriver):
         except Exception as e:
             print("Error in method cli : {}".format(e))
             log.error("Error in method cli : %s" % traceback.format_exc())
-
