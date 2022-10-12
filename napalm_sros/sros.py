@@ -3438,14 +3438,14 @@ class NokiaSROSDriver(NetworkDriver):
             if source and vrf:
                 command = (
                     "ping {d1} timeout {d2} ttl {d3} source-address {d4} size {d5} "
-                    "count {d6} router-instnace {d7}"
+                    "count {d6} router-instance {d7}"
                 )
             elif not source and not vrf:
                 command = "ping {d1} timeout {d2} ttl {d3} size {d5} count {d6}"
             elif source:
                 command = "ping {d1} timeout {d2} ttl {d3} source-address {d4} size {d5} count {d6}"
             elif vrf:
-                command = "ping {d1} timeout {d2} ttl {d3} size {d5} count {d6} router-instnace {d7}"
+                command = "ping {d1} timeout {d2} ttl {d3} size {d5} count {d6} router-instance {d7}"
             command = command.format(
                 d1=destination,
                 d2=str(timeout),
