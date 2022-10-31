@@ -159,6 +159,9 @@ class NokiaSROSDriver(NetworkDriver):
 
     def _perform_cli_commands(self, commands, is_get, no_more=False):
         if no_more:
+            # Disable paged responses, note that the '/' changes the filenames
+            # for mocked data responses under test/unit/mocked_data
+            # - they now require a leading '_'
             commands = ["/environment more false"] + commands
         try:
             is_alive = False
