@@ -1,58 +1,141 @@
 {
-    "eBGP-Peers": {
-        "apply_groups": [],
+  "ebgp": {
+    "type": "external",
+    "description": "",
+    "apply_groups": [],
+    "local_as": 65000,
+    "remote_as": 65001,
+    "remove_private_as": false,
+    "import_policy": "",
+    "export_policy": "",
+    "local_address": "",
+    "multipath": true,
+    "multihop_ttl": -1,
+    "prefix_limit": {},
+    "neighbors": {
+      "192.0.0.1": {
         "description": "",
         "local_as": 65000,
-        "type": "external",
-        "import_policy": "eBGP-import",
+        "remote_as": 65001,
+        "prefix_limit": {},
+        "import_policy": "",
         "export_policy": "",
         "local_address": "",
-        "multipath": false,
-        "multihop_ttl": -1,
-        "remote_as": 0,
-        "remove_private_as": false,
-        "prefix_limit": {},
-        "neighbors": {
-            "1.1.0.1": {
-              "description": "",
-              "remote_as": 65101,
-              "prefix_limit": {},
-              "import_policy": "",
-              "export_policy": "",
-              "local_address": "",
-              "local_as": 65000,
-              "authentication_key": "",
-              "nhs": false,
-              "route_reflector_client": false
-            }
-        }
-    },
-    "iBGP-Peers": {
-        "apply_groups": [],
+        "authentication_key": "",
+        "nhs": false,
+        "route_reflector_client": false
+      },
+      "192.0.0.3": {
         "description": "",
         "local_as": 65000,
-        "type": "internal",
-        "import_policy": "add-comm-ibgp",
+        "remote_as": 65002,
+        "prefix_limit": {},
+        "import_policy": "",
         "export_policy": "",
         "local_address": "",
-        "multipath": false,
-        "multihop_ttl": -1,
-        "remote_as": 65000,
-        "remove_private_as": false,
-        "prefix_limit": {},
-        "neighbors": {
-            "2.1.0.1": {
-                "description": "",
-                "remote_as": 65000,
-                "prefix_limit": {},
-                "import_policy": "",
-                "export_policy": "",
-                "local_address": "",
-                "local_as": 65000,
-                "authentication_key": "",
-                "nhs": false,
-                "route_reflector_client": false
-            }
-        }
+        "authentication_key": "",
+        "nhs": false,
+        "route_reflector_client": false
+      }
     }
+  },
+  "ibgp": {
+    "type": "external",
+    "description": "",
+    "apply_groups": [],
+    "local_as": 65123,
+    "remote_as": 0,
+    "remove_private_as": false,
+    "import_policy": "",
+    "export_policy": "",
+    "local_address": "",
+    "multipath": false,
+    "multihop_ttl": -1,
+    "prefix_limit": {},
+    "neighbors": {
+      "2001:192::2": {
+        "description": "",
+        "local_as": 65123,
+        "remote_as": 65123,
+        "prefix_limit": {},
+        "import_policy": "",
+        "export_policy": "",
+        "local_address": "",
+        "authentication_key": "",
+        "nhs": false,
+        "route_reflector_client": false
+      }
+    }
+  },
+  "ebgp-vprn": {
+    "type": "external",
+    "description": "",
+    "apply_groups": [],
+    "local_as": 65001,
+    "remote_as": 65000,
+    "remove_private_as": false,
+    "import_policy": "",
+    "export_policy": "",
+    "local_address": "",
+    "multipath": false,
+    "multihop_ttl": -1,
+    "prefix_limit": {},
+    "neighbors": {
+      "192.0.0.0": {
+        "description": "",
+        "local_as": 65001,
+        "remote_as": 65000,
+        "prefix_limit": {},
+        "import_policy": "",
+        "export_policy": "",
+        "local_address": "",
+        "authentication_key": "",
+        "nhs": false,
+        "route_reflector_client": false
+      }
+    }
+  },
+  "ibgp-vprn": {
+    "type": "external",
+    "description": "",
+    "apply_groups": [],
+    "local_as": 65001,
+    "remote_as": 65123,
+    "remove_private_as": false,
+    "import_policy": "",
+    "export_policy": "",
+    "local_address": "",
+    "multipath": false,
+    "multihop_ttl": -1,
+    "prefix_limit": {},
+    "neighbors": {
+      "2001:192::1": {
+        "description": "",
+        "local_as": 65123,
+        "remote_as": 65123,
+        "prefix_limit": {},
+        "import_policy": "",
+        "export_policy": "",
+        "local_address": "",
+        "authentication_key": "",
+        "nhs": true,
+        "route_reflector_client": false
+      }
+    }
+  },
+  "ebgp-vprn2": {
+    "type": "no-type",
+    "description": "",
+    "apply_groups": [],
+    "local_as": 65002,
+    "remote_as": 0,
+    "remove_private_as": true,
+    "import_policy": "",
+    "export_policy": "reject_all",
+    "local_address": "192.0.0.3",
+    "multipath": false,
+    "multihop_ttl": -1,
+    "prefix_limit": {},
+    "neighbors": {}
+  }
 }
