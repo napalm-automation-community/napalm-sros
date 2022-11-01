@@ -2894,56 +2894,43 @@ class NokiaSROSDriver(NetworkDriver):
                     with_defaults="report-all",
                 ).data_xml
             )
+            bgp_config["debug"] = to_xml(bgp_running_config, pretty_print=True)
 
             bgp_group_neighbors = {}
             bgp_groups = {}
+            global_as = self._find_txt(
+                bgp_running_config,
+                "configure_ns:configure/configure_ns:router/configure_ns:autonomous-system",
+                namespaces=self.nsmap,
+            )
 
-            for bgp_neighbor_router in bgp_running_config.xpath(
+            for router in bgp_running_config.xpath(
                 "configure_ns:configure/configure_ns:router/configure_ns:bgp",
                 namespaces=self.nsmap,
             ):
-                global_as = self._find_txt(
-                    bgp_running_config,
-                    "configure_ns:configure/configure_ns:router/configure_ns:autonomous-system",
-                    namespaces=self.nsmap,
+                _get_bgp_group_data(
+                    router.xpath("configure_ns:group", namespaces=self.nsmap)
                 )
                 _get_bgp_neighbor_group(
-                    bgp_neighbor_router.xpath(
-                        "configure_ns:neighbor", namespaces=self.nsmap
-                    ),
+                    router.xpath("configure_ns:neighbor", namespaces=self.nsmap),
                     global_as,
                 )
 
-            for bgp_neighbor_vprn in bgp_running_config.xpath(
+            for vprn in bgp_running_config.xpath(
                 "configure_ns:configure/configure_ns:service/configure_ns:vprn/configure_ns:bgp",
                 namespaces=self.nsmap,
             ):
-                global_as = self._find_txt(
-                    bgp_running_config,
-                    "configure_ns:configure/configure_ns:service/configure_ns:vprn/configure_ns:autonomous-system",
+                vprn_as = self._find_txt(
+                    vprn,"../configure_ns:autonomous-system",
                     namespaces=self.nsmap,
                 )
-                _get_bgp_neighbor_group(bgp_neighbor_vprn.xpath("neighbor"), global_as)
-
-            if neighbor and not group:
-                logging.error("Specify a group where to look for given neighbor")
-                neighbor = ""
-                return bgp_config
-
-            for bgp_group_router in bgp_running_config.xpath(
-                "configure_ns:configure/configure_ns:router/configure_ns:bgp",
-                namespaces=self.nsmap,
-            ):
+                print( f"JvB: vprn_as={vprn_as}" )
                 _get_bgp_group_data(
-                    bgp_group_router.xpath("configure_ns:group", namespaces=self.nsmap)
+                    vprn.xpath("configure_ns:group", namespaces=self.nsmap)
                 )
-
-            for bgp_group_vprn in bgp_running_config.xpath(
-                "configure_ns:configure/configure_ns:service/configure_ns:vprn/configure_ns:bgp",
-                namespaces=self.nsmap,
-            ):
-                _get_bgp_group_data(
-                    bgp_group_vprn.xpath("configure_ns:group", namespaces=self.nsmap)
+                _get_bgp_neighbor_group(
+                    vprn.xpath("neighbor", namespaces=self.nsmap),
+                    vprn_as
                 )
 
             # Assemble groups and neighbors
@@ -2988,6 +2975,7 @@ class NokiaSROSDriver(NetworkDriver):
                 }
 
             return bgp_config
+
         except Exception as e:
             print("Error in method get bgp config : {}".format(e))
             log.error("Error in method get bgp config : %s" % traceback.format_exc())
