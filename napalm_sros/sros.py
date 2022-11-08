@@ -3544,10 +3544,12 @@ class NokiaSROSDriver(NetworkDriver):
             print("Error in method traceroute : {}".format(e))
             log.error("Error in method traceroute : %s" % traceback.format_exc())
 
-    def cli(self, commands):
+    def cli(self, commands, encoding="text"):
         """
         Will execute a list of commands and return the output in a dictionary format.
         """
+        if encoding not in ("text",):
+            raise NotImplementedError("%s is not a supported encoding" % encoding)
         try:
             cli_output = {}
             for cmd in commands:
