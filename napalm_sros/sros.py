@@ -570,10 +570,12 @@ class NokiaSROSDriver(NetworkDriver):
                 default="",
                 namespaces=self.nsmap,
             )
-            # From uptime, removing last three digits which are milliseconds
+            # In uptime, last three digits are milliseconds
             if uptime:
-                uptime = uptime[:-3]
-                uptime = convert(int, uptime, default=0)
+                uptime = uptime[:-3]+ "." + uptime[-3:]
+                uptime = convert(float, uptime, default=0.0)
+            else:
+                uptime = -1.0
             interfaces = result.xpath(
                 "state_ns:state/state_ns:router/state_ns:interface/state_ns:interface-name",
                 namespaces=self.nsmap,
