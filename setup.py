@@ -21,7 +21,7 @@ setup(
     install_requires=[
         "napalm>=3.4.1",
         "pytest>=7.0.1",
-        "textfsm>=1.2.0",
+        "textfsm>=1.1.3",
         "paramiko>=2.11.0",
         "lxml>=4.9.1",
         "ncclient>=0.6.13",
