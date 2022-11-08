@@ -1,5 +1,6 @@
 coveralls
 ddt
+flake8
 flake8-import-order==0.18.1
 pytest==7.1.2
 pytest-cov
