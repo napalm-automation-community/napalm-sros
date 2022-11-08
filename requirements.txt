@@ -2,6 +2,7 @@ napalm>=4.0.0
 pytest>=7.0.1
 setuptools>=47.3.1
 pip>=21.3.1
+# napalm 4.0.0 is still pinned to this older version of textfsm (2022-11-8)
 textfsm>=1.1.2
 paramiko>=2.11.0
 lxml>=4.9.1

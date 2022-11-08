@@ -1,5 +1,8 @@
 from setuptools import setup, find_packages
 
+with open("requirements.txt", "r") as fs:
+    reqs = [r for r in fs.read().splitlines() if (len(r) > 0 and not r.startswith("#"))]
+
 with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
@@ -18,17 +21,7 @@ setup(
     ],
     url="https://github.com/napalm-automation/napalm-sros",
     include_package_data=True,
-    install_requires=[
-        "napalm>=4.0.0",
-        "pytest>=7.0.1",
-        "textfsm>=1.1.2",
-        "paramiko>=2.11.0",
-        "lxml>=4.9.1",
-        "ncclient>=0.6.13",
-        "xmltodict>=0.12.0",
-        "dictdiffer>=0.9.0",
-        "datetime>=4.7",
-    ],
+    install_requires=reqs,
     python_requires=">=3.6",
     long_description=long_description,
     long_description_content_type="text/markdown",
