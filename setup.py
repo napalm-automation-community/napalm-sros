@@ -15,14 +15,14 @@ setup(
     description="Network Automation and Programmability Abstraction Layer with Multivendor support",
     classifiers=[
         "Topic :: Internet",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Natural Language :: English",
         "Development Status :: 4 - Beta",
     ],
     url="https://github.com/napalm-automation/napalm-sros",
     include_package_data=True,
     install_requires=reqs,
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     long_description=long_description,
     long_description_content_type="text/markdown",
 )
