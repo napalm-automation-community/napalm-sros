@@ -1,5 +1,8 @@
 from setuptools import setup, find_packages
 
+with open("requirements.txt", "r") as fs:
+    reqs = [r for r in fs.read().splitlines() if (len(r) > 0 and not r.startswith("#"))]
+
 with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
@@ -11,25 +14,20 @@ setup(
     author_email="",
     description="Network Automation and Programmability Abstraction Layer with Multivendor support",
     classifiers=[
-        "Topic :: Internet",
-        "Programming Language :: Python :: 3.6",
+        "Topic :: Utilities",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Natural Language :: English",
         "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: Apache Software License",
     ],
     url="https://github.com/napalm-automation/napalm-sros",
     include_package_data=True,
-    install_requires=[
-        "napalm>=3.4.1",
-        "pytest>=7.0.1",
-        "textfsm>=1.1.3",
-        "paramiko>=2.11.0",
-        "lxml>=4.9.1",
-        "ncclient>=0.6.13",
-        "xmltodict>=0.12.0",
-        "dictdiffer>=0.9.0",
-        "datetime>=4.7",
-    ],
-    python_requires=">=3.6",
+    install_requires=reqs,
+    python_requires=">=3.7",
     long_description=long_description,
     long_description_content_type="text/markdown",
 )
