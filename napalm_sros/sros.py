@@ -51,9 +51,10 @@ from ncclient.xml_ import to_ele, to_xml
 
 # import local modules
 from napalm_sros.utils.parse_output_to_dict import parse_with_textfsm
-from napalm_sros.nc_filters import GET_ARP_TABLE,GET_BGP_CONFIG,GET_ENVIRONMENT,GET_FACTS,GET_INTERFACES, \
-     GET_INTERFACES_COUNTERS,GET_INTERFACES_IP,GET_IPV6_NEIGHBORS_TABLE,GET_LLDP_NEIGHBORS, \
-     GET_LLDP_NEIGHBORS_DETAIL,GET_NETWORK_INSTANCES,GET_NTP_PEERS,GET_NTP_SERVERS,GET_OPTICS, \
+from napalm_sros.nc_filters import GET_ARP_TABLE,GET_BGP_CONFIG,GET_ENVIRONMENT, \
+     GET_FACTS,GET_INTERFACES,GET_INTERFACES_COUNTERS,GET_INTERFACES_IP, \
+     GET_IPV6_NEIGHBORS_TABLE,GET_LLDP_NEIGHBORS,GET_LLDP_NEIGHBORS_DETAIL, \
+     GET_NETWORK_INSTANCES,GET_NTP_PEERS,GET_NTP_SERVERS,GET_OPTICS, \
      GET_PROBES_CONFIG,GET_ROUTE_TO,GET_SNMP_INFORMATION,GET_USERS
 from napalm_sros.utils.utils import init_logging
 
@@ -198,7 +199,8 @@ class NokiaSROSDriver(NetworkDriver):
                 # chunk commands into lists of length 500
                 # send all the 500 commands together
                 # receive the output from the router
-                # the last while loop is to ensure that we have received all the output from the router for the remaining commands
+                # the last while loop is to ensure that we have received all the output 
+                # from the router for the remaining commands
 
                 command_list = []
                 if len(commands) > 500:
@@ -236,7 +238,7 @@ class NokiaSROSDriver(NetworkDriver):
             return buff
         except Exception as e:
             print("Error in method perform cli commands : {}".format(e))
-            log.error("Error in method perform cli commands : %s" % traceback.format_exc())
+            log.error("Error in _perform_cli_commands : %s" % traceback.format_exc())
             return None
 
     def _lock_config(self):
@@ -317,7 +319,7 @@ class NokiaSROSDriver(NetworkDriver):
             return is_alive_dict
         except Exception as e:  # in case of any exception, returns default
             print("Error occurred in is_alive method: {}".format(e))
-            logging.error("Error occurred in is_alive method: %s" % traceback.format_exc())
+            logging.error("Error occurred in is_alive: %s" % traceback.format_exc())
 
     def discard_config(self):
         """
