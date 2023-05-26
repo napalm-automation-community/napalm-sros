@@ -51,7 +51,10 @@ from ncclient.xml_ import to_ele, to_xml
 
 # import local modules
 from napalm_sros.utils.parse_output_to_dict import parse_with_textfsm
-from napalm_sros.nc_filters import *
+from napalm_sros.nc_filters import GET_ARP_TABLE,GET_BGP_CONFIG,GET_ENVIRONMENT,GET_FACTS,GET_INTERFACES, \
+     GET_INTERFACES_COUNTERS,GET_INTERFACES_IP,GET_IPV6_NEIGHBORS_TABLE,GET_LLDP_NEIGHBORS, \
+     GET_LLDP_NEIGHBORS_DETAIL,GET_NETWORK_INSTANCES,GET_NTP_PEERS,GET_NTP_SERVERS,GET_OPTICS, \
+     GET_PROBES_CONFIG,GET_ROUTE_TO,GET_SNMP_INFORMATION,GET_USERS
 from napalm_sros.utils.utils import init_logging
 
 from .api import get_bgp_neighbors,get_bgp_neighbors_detail
@@ -2237,7 +2240,6 @@ class NokiaSROSDriver(NetworkDriver):
                 current_test_max_delay = ""
                 current_test_avg_delay = ""
                 roundtrip_jitter = ""
-                current_test_loss = ""
                 for item in buff.split("\n"):
                     if "Test runs since last clear" in item:
                         row = item.strip()
@@ -3201,7 +3203,7 @@ class NokiaSROSDriver(NetworkDriver):
                 if "Power Module" in item:
                     total_power_modules = total_power_modules + 1
                 if "Current Util." in item:
-                    row = item.strip()
+                    item.strip()
                     watts = re.match(r"^.*:\s*(\d+[.]\d+) Watts.*$", item)
                     if watts:
                         output = float(watts.groups()[0])

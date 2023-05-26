@@ -8,4 +8,6 @@ repos:
       - --fix
       - --exit-non-zero-on-fix 
       - --ignore 
+      - E401
+      - --ignore 
       - E501
