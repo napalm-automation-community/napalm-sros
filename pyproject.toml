@@ -19,6 +19,13 @@ classifiers = [
     "Natural Language :: English",
 ]
 
+authors = [
+  { name="Ashna Shah", email="ashna.shah@nokia.com" },
+  { name="Roman Dodin", email="roman.dodin@nokia.com" },
+  { name="Patryk Szulczewski", email="patryk.szulczewski@nokia.com" },
+  { name="Jeroen van Bemmel", email="jeroen.van_bemmel@nokia.com" },
+]
+
 [project.urls]
 "Homepage" = "https://github.com/napalm-automation-community/napalm-sros"
 "Bug Tracker" = "https://github.com/napalm-automation-community/napalm-sros/issues"
