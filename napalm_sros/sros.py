@@ -57,8 +57,7 @@ from napalm_sros.nc_filters import GET_ARP_TABLE,GET_BGP_CONFIG,GET_ENVIRONMENT,
      GET_PROBES_CONFIG,GET_ROUTE_TO,GET_SNMP_INFORMATION,GET_USERS
 from napalm_sros.utils.utils import init_logging
 
-from .api.get_bgp_neighbors import get_bgp_neighbors
-from .api.get_bgp_neighbors_detail import get_bgp_neighbors_detail
+from .api import get_bgp_neighbors, get_bgp_neighbors_detail
 
 log = init_logging()
 
