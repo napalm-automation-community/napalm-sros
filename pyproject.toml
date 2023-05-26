@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=56.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "napalm-sros"
+version="1.0.1"
+description="Network Automation and Programmability Abstraction Layer driver for Nokia SR OS"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Topic :: System :: Networking",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Natural Language :: English",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/napalm-automation-community/napalm-sros"
+"Bug Tracker" = "https://github.com/napalm-automation-community/napalm-sros/issues"
+
+[project.optional-dependencies]
+tests = [
+  'pytest',
+  'ruff',
+]

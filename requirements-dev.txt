@@ -1,8 +1,10 @@
 coveralls
 ddt
-flake8
-flake8-import-order==0.18.1
-pytest==7.1.2
+# flake8
+# flake8-import-order==0.18.1
+ruff
+pre-commit
+pytest
 pytest-cov
 pytest-json
 pytest-pythonpath
