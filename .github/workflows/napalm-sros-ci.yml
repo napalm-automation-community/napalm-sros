@@ -34,9 +34,9 @@ jobs:
     #     flake8 . --exclude .github,__pycache__,build,dist --count --select=E9,F63,F7,F82 --show-source --statistics
     #     # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
     #     flake8 . --exclude .github,__pycache__,build,dist --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Lint with Ruff, ignore line length and imports not at top
+    - name: Lint with Ruff, ignore line length and imports not at top or multiple
       run: |
-        ruff check napalm_sros test --ignore E501,E402
+        ruff check napalm_sros test --ignore E501,E402,E401
 
 
       # TODO future
