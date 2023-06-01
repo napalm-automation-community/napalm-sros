@@ -1,14 +1,14 @@
 # NETCONF filters
 
 # -*- coding: utf-8 -*-
-# © 2020 Nokia
+# © 2020-2023 Nokia
 # Licensed under the Apache License 2.0 License
 # SPDX-License-Identifier: Apache-2.0
 
 
 GET_FACTS = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <chassis>
                 <hardware-data>
@@ -36,7 +36,7 @@ GET_FACTS = {
 
 GET_INTERFACES = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <port>
                 <port-id></port-id>
@@ -84,7 +84,7 @@ GET_INTERFACES = {
 
 GET_INTERFACES_COUNTERS = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <port>
                 <statistics>
@@ -120,7 +120,7 @@ GET_INTERFACES_COUNTERS = {
 
 GET_NETWORK_INSTANCES = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <router>
                 <router-name>{instance_name}</router-name>
@@ -150,7 +150,7 @@ GET_NETWORK_INSTANCES = {
 
 GET_OPTICS = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <port>
                 <port-id/>
@@ -178,7 +178,7 @@ GET_OPTICS = {
 
 GET_ARP_TABLE = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <router>
                 <router-name>{vrf}</router-name>
@@ -209,7 +209,7 @@ GET_ARP_TABLE = {
 
 GET_INTERFACES_IP = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
             <router>
                 <interface>
@@ -263,7 +263,7 @@ GET_INTERFACES_IP = {
 
 GET_NTP_PEERS = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <system>
                 <time>
@@ -281,7 +281,7 @@ GET_NTP_PEERS = {
 
 GET_NTP_SERVERS = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <system>
                 <time>
@@ -299,7 +299,7 @@ GET_NTP_SERVERS = {
 
 GET_SNMP_INFORMATION = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
             <system>
                 <name/>
@@ -322,7 +322,7 @@ GET_SNMP_INFORMATION = {
 
 GET_USERS = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
             <system>
                 <security>
@@ -360,7 +360,7 @@ GET_USERS = {
 
 GET_ROUTE_TO = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <router>
                 <router-name/>
@@ -383,7 +383,7 @@ GET_ROUTE_TO = {
 
 GET_PROBES_CONFIG = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
             <saa>
                 <owner>
@@ -406,7 +406,7 @@ GET_PROBES_CONFIG = {
 
 GET_BGP_CONFIG = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
             <router>
                 <autonomous-system/>
@@ -582,7 +582,7 @@ GET_BGP_CONFIG = {
 
 GET_LLDP_NEIGHBORS = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <port>
                 <oper-state/>
@@ -606,7 +606,7 @@ GET_LLDP_NEIGHBORS = {
 
 GET_LLDP_NEIGHBORS_DETAIL = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <port>
                 <port-id>{port_id}</port-id>
@@ -633,7 +633,7 @@ GET_LLDP_NEIGHBORS_DETAIL = {
 }
 GET_IPV6_NEIGHBORS_TABLE = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <router>
                 <router-name/>
@@ -651,7 +651,7 @@ GET_IPV6_NEIGHBORS_TABLE = {
 
 GET_ENVIRONMENT = {
     "_": """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <chassis>
                 <fan>
