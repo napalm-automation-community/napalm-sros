@@ -1,36 +1,164 @@
-<data xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
+<?xml version="1.0" encoding="UTF-8"?><data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf" xmlns:nokia-attr="urn:nokia.com:sros:ns:yang:sr:attributes">
         <router>
             <router-name>Base</router-name>
             <autonomous-system>65000</autonomous-system>
             <bgp>
+                <client-reflect>true</client-reflect>
+                <cluster>
+                </cluster>
+                <local-as>
+                </local-as>
+                <import>
+                    <policy>accept_all</policy>
+                </import>
+                <multipath>
+                    <ebgp>2</ebgp>
+                </multipath>
                 <group>
-                    <group-name>eBGP-Peers</group-name>
-                    <type>external</type>
-                    <import>
-                        <policy>eBGP-import</policy>
-                    </import>
+                    <group-name>ebgp</group-name>
+                    <next-hop-self>false</next-hop-self>
+                    <type>internal</type>
+                    <peer-as>65001</peer-as>
+                    <local-as>
+                    </local-as>
                 </group>
                 <group>
-                    <group-name>iBGP-Peers</group-name>
-                    <type>internal</type>
-                    <cluster>
-                        <cluster-id>10.1.1.1</cluster-id>
-                    </cluster>
-                    <import>
-                        <policy>add-comm-ibgp</policy>
-                    </import>
+                    <group-name>ibgp</group-name>
+                    <next-hop-self>false</next-hop-self>
+                    <type>external</type>
+                    <local-as>
+                        <as-number>65123</as-number>
+                    </local-as>
                 </group>
                 <neighbor>
-                    <ip-address>1.1.0.1</ip-address>
-                    <group>eBGP-Peers</group>
-                    <peer-as>65101</peer-as>
+                    <ip-address>192.0.0.1</ip-address>
+                    <group>ebgp</group>
+                    <cluster>
+                    </cluster>
+                    <local-as>
+                    </local-as>
                 </neighbor>
                 <neighbor>
-                    <ip-address>2.1.0.1</ip-address>
-                    <group>iBGP-Peers</group>
+                    <ip-address>192.0.0.3</ip-address>
+                    <group>ebgp</group>
+                    <peer-as>65002</peer-as>
+                    <cluster>
+                    </cluster>
+                    <local-as>
+                    </local-as>
+                </neighbor>
+                <neighbor>
+                    <ip-address>2001:192::2</ip-address>
+                    <group>ibgp</group>
+                    <type>internal</type>
+                    <cluster>
+                    </cluster>
+                    <local-as>
+                    </local-as>
                 </neighbor>
             </bgp>
         </router>
+        <router>
+            <router-name>management</router-name>
+        </router>
+        <router>
+            <router-name>vpls-management</router-name>
+        </router>
+        <service>
+            <vprn>
+                <service-name>peer</service-name>
+                <autonomous-system>65001</autonomous-system>
+                <bgp>
+                    <client-reflect>true</client-reflect>
+                    <cluster>
+                    </cluster>
+                    <local-as>
+                    </local-as>
+                    <import>
+                        <policy>accept_all</policy>
+                    </import>
+                    <export>
+                        <policy>accept_all</policy>
+                    </export>
+                    <multipath>
+                    </multipath>
+                    <group>
+                        <group-name>ebgp-vprn</group-name>
+                        <next-hop-self>false</next-hop-self>
+                        <type>no-type</type>
+                        <peer-as>65000</peer-as>
+                        <cluster>
+                        </cluster>
+                        <local-as>
+                        </local-as>
+                    </group>
+                    <group>
+                        <group-name>ibgp-vprn</group-name>
+                        <next-hop-self>true</next-hop-self>
+                        <type>no-type</type>
+                        <peer-as>65123</peer-as>
+                        <cluster>
+                        </cluster>
+                        <local-as>
+                        </local-as>
+                    </group>
+                    <neighbor>
+                        <ip-address>192.0.0.0</ip-address>
+                        <group>ebgp-vprn</group>
+                        <cluster>
+                        </cluster>
+                        <local-as>
+                        </local-as>
+                    </neighbor>
+                    <neighbor>
+                        <ip-address>2001:192::1</ip-address>
+                        <group>ibgp-vprn</group>
+                        <client-reflect>false</client-reflect>
+                        <cluster>
+                            <cluster-id>1.2.3.4</cluster-id>
+                        </cluster>
+                        <local-as>
+                            <as-number>65123</as-number>
+                        </local-as>
+                    </neighbor>
+                </bgp>
+            </vprn>
+            <vprn>
+                <service-name>peer2</service-name>
+                <autonomous-system>65002</autonomous-system>
+                <bgp>
+                    <client-reflect>true</client-reflect>
+                    <cluster>
+                    </cluster>
+                    <local-as>
+                    </local-as>
+                    <export>
+                        <policy>accept_all</policy>
+                    </export>
+                    <multipath>
+                    </multipath>
+                    <group>
+                        <group-name>ebgp-vprn2</group-name>
+                        <next-hop-self>false</next-hop-self>
+                        <type>no-type</type>
+                        <local-address>192.0.0.3</local-address>
+                        <remove-private>
+                            <limited>true</limited>
+                            <skip-peer-as>false</skip-peer-as>
+                            <replace>false</replace>
+                        </remove-private>
+                        <cluster>
+                        </cluster>
+                        <local-as>
+                            <as-number>65002</as-number>
+                        </local-as>
+                        <export>
+                            <policy>reject_all</policy>
+                        </export>
+                    </group>
+                </bgp>
+            </vprn>
+        </service>
     </configure>
 </data>

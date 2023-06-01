@@ -19,7 +19,8 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import logging, sys, os
+import sys
+import logging
 
 def test_get_bgp_neighbors_detail():
   LOG_FORMAT = '%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s'

@@ -417,17 +417,15 @@ GET_BGP_CONFIG = {
                     <local-as>
                         <as-number/>
                     </local-as>
-                    <import>
-                        <policy/>
-                    </import>
-                    <export>
-                        <policy/>
-                    </export>
                     <remove-private/>
                     <cluster>
                         <cluster-id/>
                     </cluster>
-
+                    <multipath>
+                     <ebgp/>
+                     <ibgp/>
+                    </multipath>
+                    <client-reflect/>
                     <group>
                         <group-name>{group_name}</group-name>
                         <description/>
@@ -437,6 +435,7 @@ GET_BGP_CONFIG = {
                         <peer-as/>
                         <local-address/>
                         <next-hop-self/>
+                        <client-reflect/>
                         <local-as>
                             <as-number/>
                         </local-as>
@@ -449,7 +448,6 @@ GET_BGP_CONFIG = {
                         <remove-private>
                             <limited/>
                         </remove-private>
-                        <multipath-eligible/>
                         <prefix-limit>
                             <family/>
                             <maximum/>
@@ -461,6 +459,7 @@ GET_BGP_CONFIG = {
                     <neighbor>
                         <ip-address>{neighbor}</ip-address>
                         <group/>
+                        <type/>
                         <authentication-keychain/>
                         <description/>
                         <peer-as/>
@@ -490,25 +489,23 @@ GET_BGP_CONFIG = {
             </router>
             <service>
                 <vprn>
-                    <autonomous-system/>
-                    <bgp>
+                  <autonomous-system/>
+                  <bgp>
                     <description/>
                     <apply-groups/>
                     <multihop/>
                     <local-as>
                         <as-number/>
                     </local-as>
-                    <import>
-                        <policy/>
-                    </import>
-                    <export>
-                        <policy/>
-                    </export>
                     <remove-private/>
                     <cluster>
                         <cluster-id/>
                     </cluster>
-
+                    <multipath>
+                     <ebgp/>
+                     <ibgp/>
+                    </multipath>
+                    <client-reflect/>
                     <group>
                         <group-name>{group_name}</group-name>
                         <description/>
@@ -540,15 +537,17 @@ GET_BGP_CONFIG = {
                         <cluster>
                             <cluster-id/>
                         </cluster>
+                        <client-reflect/>
                     </group>
-
                     <neighbor>
                         <ip-address>{neighbor}</ip-address>
                         <group/>
+                        <type/>
                         <authentication-keychain/>
                         <description/>
                         <peer-as/>
                         <next-hop-self/>
+                        <client-reflect/>
                         <local-as>
                             <as-number/>
                         </local-as>
@@ -572,7 +571,7 @@ GET_BGP_CONFIG = {
                             <cluster-id/>
                         </cluster>
                     </neighbor>
-                </bgp>
+                  </bgp>
                 </vprn>
             </service>
         </configure>

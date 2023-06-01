@@ -51,10 +51,14 @@ from ncclient.xml_ import to_ele, to_xml
 
 # import local modules
 from napalm_sros.utils.parse_output_to_dict import parse_with_textfsm
-from napalm_sros.nc_filters import *
+from napalm_sros.nc_filters import GET_ARP_TABLE,GET_BGP_CONFIG,GET_ENVIRONMENT, \
+     GET_FACTS,GET_INTERFACES,GET_INTERFACES_COUNTERS,GET_INTERFACES_IP, \
+     GET_IPV6_NEIGHBORS_TABLE,GET_LLDP_NEIGHBORS,GET_LLDP_NEIGHBORS_DETAIL, \
+     GET_NETWORK_INSTANCES,GET_NTP_PEERS,GET_NTP_SERVERS,GET_OPTICS, \
+     GET_PROBES_CONFIG,GET_ROUTE_TO,GET_SNMP_INFORMATION,GET_USERS
 from napalm_sros.utils.utils import init_logging
 
-from .api import get_bgp_neighbors,get_bgp_neighbors_detail
+from .api import get_bgp_neighbors, get_bgp_neighbors_detail
 
 log = init_logging()
 
@@ -75,14 +79,24 @@ class NokiaSROSDriver(NetworkDriver):
         self.locked = False
         self.terminal_stdout_re = [
             re.compile(
-                "[\r\n]*\!?\*?(\((ex|gl|pr|ro)\))?\[.*\][\r\n]+[ABCD]\:\S+\@\S+\#\s$"
+                r"[\r\n]*\!?\*?(\((ex|gl|pr|ro)\))?\[.*\][\r\n]+[ABCD]\:\S+\@\S+\#\s$"
             ),
-            re.compile("[\r\n]*\*?[ABCD]:[\w\-\.\,\>]+[#\$]\s"),
+            re.compile(r"[\r\n]*\*?[ABCD]:[\w\-\.\,\>]+[#\$]\s"),
         ]
         self.terminal_stderr_re = [
             re.compile("Error: .*[\r\n]+"),
             re.compile("(MINOR|MAJOR|CRITICAL): .*[\r\n]+"),
         ]
+
+        self.ipv4_address_re = re.compile(
+            r"(([2][5][0-5]\.)|([2][0-4][0-9]\.)|([0-1]?[0-9]?[0-9]\.)){3}"
+            + "(([2][5][0-5])|([2][0-4][0-9])|([0-1]?[0-9]?[0-9]))"
+        )
+
+        self.ipv6_address_re = re.compile(
+          r"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
+        )
+        self.cmd_line_pattern_re = re.compile(r"\*?(.*?)(>.*)*#.*?")
 
         if optional_args is None:
             optional_args = {}
@@ -157,7 +171,12 @@ class NokiaSROSDriver(NetworkDriver):
             print("Error in opening a ssh connection: {}".format(e))
             log.error("Error in opening a ssh connection: %s" % traceback.format_exc())
 
-    def _perform_cli_commands(self, commands, is_get):
+    def _perform_cli_commands(self, commands, is_get, no_more=False):
+        if no_more:
+            # Disable paged responses, note that the '/' changes the filenames
+            # for mocked data responses under test/unit/mocked_data
+            # - they now require a leading '_'
+            commands = ["/environment more false"] + commands
         try:
             is_alive = False
             if self.conn_ssh is not None:
@@ -175,12 +194,13 @@ class NokiaSROSDriver(NetworkDriver):
                         resp = self.ssh_channel.recv(9999)
                         buff += resp.decode("ascii")
                         if re.search(self.terminal_stdout_re[0], buff):
-                            break
+                          break
             else:
                 # chunk commands into lists of length 500
                 # send all the 500 commands together
                 # receive the output from the router
-                # the last while loop is to ensure that we have received all the output from the router for the remaining commands
+                # the last while loop is to ensure that we have received all the output 
+                # from the router for the remaining commands
 
                 command_list = []
                 if len(commands) > 500:
@@ -218,7 +238,8 @@ class NokiaSROSDriver(NetworkDriver):
             return buff
         except Exception as e:
             print("Error in method perform cli commands : {}".format(e))
-            log.error("Error in method perform cli commands : %s" % traceback.format_exc())
+            log.error("Error in _perform_cli_commands : %s" % traceback.format_exc())
+            return None
 
     def _lock_config(self):
         if not self.locked:
@@ -298,7 +319,7 @@ class NokiaSROSDriver(NetworkDriver):
             return is_alive_dict
         except Exception as e:  # in case of any exception, returns default
             print("Error occurred in is_alive method: {}".format(e))
-            logging.error("Error occurred in is_alive method: %s" % traceback.format_exc())
+            logging.error("Error occurred in is_alive: %s" % traceback.format_exc())
 
     def discard_config(self):
         """
@@ -319,9 +340,8 @@ class NokiaSROSDriver(NetworkDriver):
             buff = self._perform_cli_commands(["commit"], True)
             # If error while performing commit, return the error
             error = ""
-            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#\s")
             for item in buff.split("\n"):
-                if cmd_line_pattern.search(item):
+                if self.cmd_line_pattern_re.search(item):
                     continue
                 if any(match.search(item) for match in self.terminal_stderr_re):
                     row = item.strip()
@@ -338,7 +358,7 @@ class NokiaSROSDriver(NetworkDriver):
         """
         If changes were made, revert changes to the original state.
         """
-        cmd = ["quit-config", "configure exclusive", "rollback 1", "commit", "exit"]
+        cmd = ["/quit-config", "/configure exclusive", "rollback 1", "commit", "exit"]
         buff = self._perform_cli_commands(cmd, True)
         error = ""
 
@@ -362,11 +382,8 @@ class NokiaSROSDriver(NetworkDriver):
         """
         buff = ""
         if self.fmt == "text":
-            buff = self._perform_cli_commands(
-                ["environment more false", "compare"], True
-            )
-            cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
-            # buff = self._perform_cli_commands(["environment more false", "compare"])
+            buff = self._perform_cli_commands( ["compare"], True, no_more=True )
+            # buff = self._perform_cli_commands(["/environment more false", "compare"])
         else:
             #  if format is xml we convert them into dict and perform a diff on configs to return the difference
             # running_dict = xmltodict.parse(running_config, process_namespaces=True)
@@ -403,9 +420,9 @@ class NokiaSROSDriver(NetworkDriver):
                     continue
                 elif "(ex)[]" in item:
                     continue
-                elif "environment more false" in item:
+                elif "/environment more false" in item:
                     continue
-                elif cmd_line_pattern.search(item):
+                elif self.cmd_line_pattern_re.search(item):
                     continue
                 elif self.terminal_stdout_re[0].search(item):
                     continue
@@ -443,44 +460,42 @@ class NokiaSROSDriver(NetworkDriver):
             with open(filename) as f:
                 configuration = f.read()
 
-        try:
-            self.fmt = self._determinne_config_format(configuration)
-            if self.fmt == "xml":
-                if not self.lock_disable and not self.session_config_lock:
-                    self._lock_config()
-                configuration = etree.XML(configuration)
-                configuration_tree = etree.ElementTree(configuration)
-                root = configuration_tree.getroot()
-                if root.tag != "{urn:ietf:params:xml:ns:netconf:base:1.0}config":
-                    newroot = etree.Element(
-                        "{urn:ietf:params:xml:ns:netconf:base:1.0}config"
-                    )
-                    newroot.insert(0, root)
-                    self.conn.edit_config(
-                        config=newroot, target="candidate", default_operation="merge"
-                    )
-
-                else:
-                    self.conn.edit_config(
-                        config=configuration,
-                        target="candidate",
-                        default_operation="merge",
-                    )
-                self.conn.validate(source="candidate")
+        self.fmt = self._determinne_config_format(configuration)
+        if self.fmt == "xml":
+            if not self.lock_disable and not self.session_config_lock:
+                self._lock_config()
+            configuration = etree.XML(configuration)
+            configuration_tree = etree.ElementTree(configuration)
+            root = configuration_tree.getroot()
+            if root.tag != "{urn:ietf:params:xml:ns:netconf:base:1.0}config":
+                newroot = etree.Element(
+                    "{urn:ietf:params:xml:ns:netconf:base:1.0}config"
+                )
+                newroot.insert(0, root)
+                self.conn.edit_config(
+                    config=newroot, target="candidate", default_operation="merge"
+                )
 
             else:
-                configuration = configuration.split("\n")
-                configuration.insert(0, "edit-config exclusive")
-                buff = self._perform_cli_commands(configuration, False)
-                # error checking
-                if buff is not None:
-                    for item in buff.split("\n"):
-                        if any(match.search(item) for match in self.terminal_stderr_re):
-                            raise MergeConfigException("Merge issue: %s", item)
+                self.conn.edit_config(
+                    config=configuration,
+                    target="candidate",
+                    default_operation="merge",
+                )
+            self.conn.validate(source="candidate")
 
-        except MergeConfigException as me:
-            print("Merge issue : {}".format(me))
-            log.error("Merge issue : %s" %traceback.format_exc())
+        else:
+            configuration = configuration.split("\n")
+            configuration.insert(0, "edit-config exclusive")
+            buff = self._perform_cli_commands(configuration, False)
+            # error checking
+            if buff is not None:
+                for item in buff.split("\n"):
+                    if any(match.search(item) for match in self.terminal_stderr_re):
+                        log.error(f"Merge issue : {item}")
+                        raise MergeConfigException("Merge issue: %s", item)
+            else:
+                raise MergeConfigException("Timeout during load_merge_candidate")
 
     def load_replace_candidate(self, filename=None, config=None):
         """
@@ -501,42 +516,40 @@ class NokiaSROSDriver(NetworkDriver):
             with open(filename) as f:
                 configuration = f.read()
 
-        try:
-            self.fmt = self._determinne_config_format(configuration)
-            if self.fmt == "xml":
-                if not self.lock_disable and not self.session_config_lock:
-                    self._lock_config()
-                configuration = etree.XML(configuration)
-                configuration_tree = etree.ElementTree(configuration)
-                root = configuration_tree.getroot()
-                if root.tag != "{urn:ietf:params:xml:ns:netconf:base:1.0}config":
-                    newroot = etree.Element(
-                        "{urn:ietf:params:xml:ns:netconf:base:1.0}config"
-                    )
-                    newroot.insert(0, root)
-                    self.conn.edit_config(
-                        config=newroot, target="candidate", default_operation="replace",
-                    )
-                else:
-                    self.conn.edit_config(
-                        config=configuration,
-                        target="candidate",
-                        default_operation="replace",
-                    )
-                self.conn.validate(source="candidate")
+        self.fmt = self._determinne_config_format(configuration)
+        if self.fmt == "xml":
+            if not self.lock_disable and not self.session_config_lock:
+                self._lock_config()
+            configuration = etree.XML(configuration)
+            configuration_tree = etree.ElementTree(configuration)
+            root = configuration_tree.getroot()
+            if root.tag != "{urn:ietf:params:xml:ns:netconf:base:1.0}config":
+                newroot = etree.Element(
+                    "{urn:ietf:params:xml:ns:netconf:base:1.0}config"
+                )
+                newroot.insert(0, root)
+                self.conn.edit_config(
+                    config=newroot, target="candidate", default_operation="replace",
+                )
             else:
-                configuration = configuration.split("\n")
-                configuration.insert(0, "edit-config exclusive")
-                configuration.insert(1, "delete configure")
-                buff = self._perform_cli_commands(configuration, False)
-                # error checking
-                if buff is not None:
-                    for item in buff.split("\n"):
-                        if any(match.search(item) for match in self.terminal_stderr_re):
-                            raise ReplaceConfigException("Replace issue: %s", item)
-        except ReplaceConfigException as rex:
-            print("Replace issue: {}".format(rex))
-            log.error("Replace issue: %s" % traceback.format_exc())
+                self.conn.edit_config(
+                    config=configuration,
+                    target="candidate",
+                    default_operation="replace",
+                )
+            self.conn.validate(source="candidate")
+        else:
+            configuration = configuration.split("\n")
+            configuration.insert(0, "edit-config exclusive")
+            configuration.insert(1, "delete configure")
+            buff = self._perform_cli_commands(configuration, False)
+            # error checking
+            if buff is not None:
+                for item in buff.split("\n"):
+                    if any(match.search(item) for match in self.terminal_stderr_re):
+                        raise ReplaceConfigException("Replace issue: %s", item)
+            else:
+                raise ReplaceConfigException("Timeout during load_replace_candidate")
 
     def get_facts(self):
         """
@@ -567,10 +580,12 @@ class NokiaSROSDriver(NetworkDriver):
                 default="",
                 namespaces=self.nsmap,
             )
-            # From uptime, removing last three digits which are milliseconds
+            # In uptime, last three digits are milliseconds
             if uptime:
-                uptime = uptime[:-3]
-                uptime = convert(int, uptime, default=0)
+                uptime = uptime[:-3]+ "." + uptime[-3:]
+                uptime = convert(float, uptime, default=0.0)
+            else:
+                uptime = -1.0
             interfaces = result.xpath(
                 "state_ns:state/state_ns:router/state_ns:interface/state_ns:interface-name",
                 namespaces=self.nsmap,
@@ -1126,7 +1141,6 @@ class NokiaSROSDriver(NetworkDriver):
                     else:
                         updated_buff = [buff]
                     new_buff = ""
-                    cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#.*?")
                     match_strings = [
                         cmd_candidate[0],
                         cmd_candidate[1],
@@ -1140,7 +1154,7 @@ class NokiaSROSDriver(NetworkDriver):
                             continue
                         if "[]" in item:
                             continue
-                        elif cmd_line_pattern.search(item) or not row:
+                        elif self.cmd_line_pattern_re.search(item) or not row:
                             continue
                         elif "persistent-indices" in item:
                             break
@@ -1188,7 +1202,7 @@ class NokiaSROSDriver(NetworkDriver):
                     )
                     # remove xml declaration
                     config_data_running_xml = re.sub(
-                        "<\?xml.*\?>", "", config_data_running_xml
+                        r"<\?xml.*\?>", "", config_data_running_xml
                     )
                     configuration["running"] = config_data_running_xml
 
@@ -1205,7 +1219,7 @@ class NokiaSROSDriver(NetworkDriver):
                         )[0]
                     )
                     config_data_candidate_xml = re.sub(
-                        "<\?xml.*\?>", "", config_data_candidate_xml
+                        r"<\?xml.*\?>", "", config_data_candidate_xml
                     )
                     configuration["candidate"] = config_data_candidate_xml
                 return configuration
@@ -1582,17 +1596,13 @@ class NokiaSROSDriver(NetworkDriver):
 
             # helper method
             def _get_ntp_stats_data(buff):
-                ip_pattern = re.compile(
-                    "(([2][5][0-5]\.)|([2][0-4][0-9]\.)|([0-1]?[0-9]?[0-9]\.)){3}"
-                    + "(([2][5][0-5])|([2][0-4][0-9])|([0-1]?[0-9]?[0-9]))"
-                )
                 dashed_row = False
                 temp_dict = {}
                 for item in buff.split("\n"):
                     if "---" in item:
                         dashed_row = True
                         continue
-                    if ip_pattern.search(item) or dashed_row:
+                    if self.ipv4_address_re.search(item) or dashed_row:
                         row = item.strip()
                         row_list = row.split()
                         if len(row_list) == 8:
@@ -1619,11 +1629,11 @@ class NokiaSROSDriver(NetworkDriver):
                 ntp_stats_list.append(temp_dict)
                 return ntp_stats_list
 
-            cmd = ["environment more false", "show system ntp servers"]
-            buff_servers = self._perform_cli_commands(cmd, True)
+            cmd = ["/show system ntp servers"]
+            buff_servers = self._perform_cli_commands(cmd, True, no_more=True)
             ntp_stats_list = _get_ntp_stats_data(buff_servers)
-            cmd = ["environment more false", "show system ntp peers"]
-            buff_peers = self._perform_cli_commands(cmd, True)
+            cmd = ["/show system ntp peers"]
+            buff_peers = self._perform_cli_commands(cmd, True, no_more=True)
             ntp_stats_list = _get_ntp_stats_data(buff_peers)
 
             return ntp_stats_list
@@ -1803,10 +1813,8 @@ class NokiaSROSDriver(NetworkDriver):
 
             def _get_protocol_attributes(router_name, local_protocol):
                 # destination needs to be with prefix
-                command = f"show router {router_name} route-table {destination} protocol {local_protocol} extensive all"
-                output = self._perform_cli_commands(
-                    ["environment more false", command], True
-                )
+                command = f"/show router {router_name} route-table {destination} protocol {local_protocol} extensive all"
+                output = self._perform_cli_commands([command], True, no_more=True)
                 destination_address_with_prefix = ""
                 next_hop_once = False
                 next_hop = ""
@@ -1873,10 +1881,8 @@ class NokiaSROSDriver(NetworkDriver):
                     elif "Next-Hop" in item_1:
                         row_1 = item_1.strip()
                         row_1_list = row_1.split(": ")
-                        if ip_pattern.search(row_1_list[1]):
-                            temp_2_dict = {"selected_next_hop": True}
-                        else:
-                            temp_2_dict = {"selected_next_hop": False}
+                        _sel = self.ipv4_address_re.search(row_1_list[1])
+                        temp_2_dict = {"selected_next_hop": bool(_sel)}
                         if "Indirect" in item_1:
                             if next_hop_once:
                                 next_hop = row_1_list[1]
@@ -1947,10 +1953,8 @@ class NokiaSROSDriver(NetworkDriver):
                     destination_address_with_prefix = k
                 if destination_address_with_prefix:
                     # protocol attributes local_as, as_path, local_preference
-                    cmd = f"show router {router_name} bgp routes {destination_address_with_prefix} detail"
-                    buff_1 = self._perform_cli_commands(
-                        ["environment more false", cmd], True
-                    )
+                    cmd = f"/show router {router_name} bgp routes {destination_address_with_prefix} detail"
+                    buff_1 = self._perform_cli_commands( [cmd], True, no_more=True )
 
                     for d in route_to_dict[destination_address_with_prefix]:
                         next_hop = d.get("next_hop")
@@ -2057,10 +2061,8 @@ class NokiaSROSDriver(NetworkDriver):
                 if destination_address_with_prefix:
                     for d in route_to_dict[destination_address_with_prefix]:
                         d.update({"protocol_attributes": {}})
-                    command = f"show router {router_name} isis routes ip-prefix-prefix-length {destination_address_with_prefix}"
-                    buff_1 = self._perform_cli_commands(
-                        ["environment more false", command], True
-                    )
+                    command = f"/show router {router_name} isis routes ip-prefix-prefix-length {destination_address_with_prefix}"
+                    buff_1 = self._perform_cli_commands([command], True, no_more=True)
                     prev_row = ""
                     for item_1 in buff_1.split("\n"):
                         if destination_address_with_prefix in item_1 or prev_row:
@@ -2088,10 +2090,8 @@ class NokiaSROSDriver(NetworkDriver):
                 if destination_address_with_prefix:
                     for d in route_to_dict[destination_address_with_prefix]:
                         d.update({"protocol_attributes": {}})
-                    command = f"show router {router_name} ospf routes {destination_address_with_prefix}"
-                    buff_1 = self._perform_cli_commands(
-                        ["environment more false", command], True
-                    )
+                    command = f"/show router {router_name} ospf routes {destination_address_with_prefix}"
+                    buff_1 = self._perform_cli_commands([command], True, no_more=True)
                     first_row = False
                     for item_1 in buff_1.split("\n"):
                         if destination_address_with_prefix in item_1 or first_row:
@@ -2126,11 +2126,6 @@ class NokiaSROSDriver(NetworkDriver):
                     self._find_txt(vprn, "state_ns:oper-service-id", namespaces=self.nsmap)
                 )
 
-            ip_pattern = re.compile(
-                "(([2][5][0-5]\.)|([2][0-4][0-9]\.)|([0-1]?[0-9]?[0-9]\.)){3}"
-                + "(([2][5][0-5])|([2][0-4][0-9])|([0-1]?[0-9]?[0-9]))"
-            )
-
             for name in name_list:
 
                 bgp_once = False
@@ -2144,13 +2139,13 @@ class NokiaSROSDriver(NetworkDriver):
                         destination_address_with_prefix = destination + "/32"
                     else:
                         destination_address_with_prefix = destination
-                    cmd = f"show router {name} route-table {destination_address_with_prefix} longer\n"
+                    cmd = f"/show router {name} route-table {destination_address_with_prefix} longer\n"
                 else:
-                    cmd = f"show router {name} route-table {destination} \n"
+                    cmd = f"/show router {name} route-table {destination} \n"
 
-                buff = self._perform_cli_commands(["environment more false", cmd], True)
+                buff = self._perform_cli_commands([cmd], True, no_more=True)
                 for item in buff.split("\n"):
-                    if ip_pattern.search(item):
+                    if self.ipv4_address_re.search(item):
                         if "# show" in item:
                             continue
                         row = item.strip()
@@ -2234,8 +2229,8 @@ class NokiaSROSDriver(NetworkDriver):
                     probes_results.update({probe_name: {}})
                 probes_results[probe_name].update({test_name: {}})
                 path = "configure_ns:type/configure_ns:icmp-ping"
-                cmd = f"show saa {test_name}"
-                buff = self._perform_cli_commands(["environment more false", cmd], True)
+                cmd = f"/show saa {test_name}"
+                buff = self._perform_cli_commands([cmd], True, no_more=True)
                 test_number_1 = ""
                 test_number_2 = 0
                 found_first_test = False
@@ -2247,7 +2242,6 @@ class NokiaSROSDriver(NetworkDriver):
                 current_test_max_delay = ""
                 current_test_avg_delay = ""
                 roundtrip_jitter = ""
-                current_test_loss = ""
                 for item in buff.split("\n"):
                     if "Test runs since last clear" in item:
                         row = item.strip()
@@ -2440,8 +2434,8 @@ class NokiaSROSDriver(NetworkDriver):
         try:
             mac_address_list = []
 
-            cmd = "show service fdb-mac"
-            buff = self._perform_cli_commands(["environment more false", cmd], True)
+            cmd = "/show service fdb-mac"
+            buff = self._perform_cli_commands([cmd], True, no_more=True)
             template = "textfsm_templates//nokia_sros_show_service_fdb_mac.tpl"
             # template = "textfsm_templates\\nokia_sros_show_service_fdb_mac.tpl"
             output_list = parse_with_textfsm(template, buff)
@@ -2617,6 +2611,10 @@ class NokiaSROSDriver(NetworkDriver):
                 }
             }
         """
+        #
+        # Note: returns all bgp neighbors across all VRFs, merging groups with the same name
+        # Does not (cannot) report dynamic neighbors, only static ones
+        #
         try:
             bgp_config = {}
 
@@ -2664,64 +2662,69 @@ class NokiaSROSDriver(NetworkDriver):
                 policies = [ele.text for ele in policies_xml]
                 return ", ".join(policies)
 
-            def _get_bgp_neighbor_group(bgp_neighbors, global_autonomous):
+            def _route_reflect(xml):
+              _cluster_id = self._find_txt(xml,"configure_ns:cluster/configure_ns:cluster-id",namespaces=self.nsmap)
+              _client_reflect = self._find_txt(xml,"configure_ns:client-reflect", namespaces=self.nsmap)
+              return (bool(_cluster_id),_client_reflect) # keep client_reflect as string to distinguish between not set and 'false'
+
+            def _get_bgp_neighbor_group(bgp_neighbors,global_autonomous):
                 for bgp_neighbor in bgp_neighbors:
                     group_name = self._find_txt(
                         bgp_neighbor, "configure_ns:group", namespaces=self.nsmap
                     )
+
+                    def _group_attr(attr):
+                      return bgp_groups[group_name][attr] if group_name in bgp_groups and attr in bgp_groups[group_name] else None
+
                     peer = ip(
                         self._find_txt(
                             bgp_neighbor, "configure_ns:ip-address", namespaces=self.nsmap
                         )
                     )
-                    type_ = self._find_txt(
-                        bgp_neighbor, "configure_ns:type", namespaces=self.nsmap
-                    )
 
                     if neighbor != "" and peer != neighbor:
                         continue
 
-                    nhs = (
-                        True
-                        if self._find_txt(
-                            bgp_neighbor,
-                            "configure_ns:next-hop-self",
-                            namespaces=self.nsmap,
-                        )
-                        == "true"
-                        else False
+                    # JvB note: 'type' configuration allows implicit peer AS configuration for iBGP
+                    type_ = self._find_txt(
+                        bgp_neighbor, "configure_ns:type", namespaces=self.nsmap
+                    ) or _group_attr('type')
+
+                    _nhs = self._find_txt(
+                        bgp_neighbor,"configure_ns:next-hop-self",namespaces=self.nsmap,
                     )
-                    cluster_id = self._find_txt(
-                        bgp_neighbor,
-                        "configure_ns:cluster/configure_ns:cluster-id",
-                        namespaces=self.nsmap,
-                    )
-                    client_reflect = self._find_txt(
-                        bgp_neighbor, "configure_ns:client-reflect", namespaces=self.nsmap
-                    )
-                    route_reflector = ""
-                    if cluster_id and client_reflect == "true":
-                        route_reflector = True
+                    _next_hop_self = (_nhs != "false") if _nhs else _group_attr('_nhs')
+
+                    _cluster_id,_client_reflect = _route_reflect(bgp_neighbor)
+                    route_reflector = (_cluster_id or _group_attr('_cluster_id')) \
+                                  and (_group_attr('_client_reflect') and _client_reflect=="")
 
                     explicit_local_as = self._find_txt(
                         bgp_neighbor,
                         "configure_ns:local-as/configure_ns:as-number",
                         namespaces=self.nsmap,
                     )
-                    if explicit_local_as:
-                        local_as = explicit_local_as
-                    else:
-                        local_as = global_autonomous
+
+                    # Order of priority:
+                    # 1. Neighbor level local-as
+                    # 2. Group level local-as
+                    # 3. Global AS
+                    local_as = explicit_local_as or _group_attr('local_as') or global_autonomous
 
                     explicit_peer_as = self._find_txt(
                         bgp_neighbor, "configure_ns:peer-as", namespaces=self.nsmap
                     )
+
                     if explicit_peer_as:
-                        peer_as = explicit_peer_as
-                    elif type_ == "internal" and not explicit_peer_as:
-                        peer_as = global_autonomous
+                      peer_as = explicit_peer_as
                     else:
-                        peer_as = 0
+                      group_remote_as = _group_attr('remote_as')
+                      if group_remote_as:
+                        peer_as = group_remote_as
+                      elif type_=="internal": # implicit peer_as configuration
+                        peer_as = local_as
+                      else:
+                        peer_as = 0 # Not configured
 
                     if group_name not in bgp_group_neighbors.keys():
                         bgp_group_neighbors[group_name] = {}
@@ -2729,6 +2732,7 @@ class NokiaSROSDriver(NetworkDriver):
                         "description": self._find_txt(
                             bgp_neighbor, "configure_ns:description", namespaces=self.nsmap
                         ),
+                        "local_as": as_number(local_as),
                         "remote_as": as_number(peer_as),
                         "prefix_limit": _build_prefix_limit(bgp_neighbor),
                         "import_policy": _get_policies(
@@ -2751,29 +2755,25 @@ class NokiaSROSDriver(NetworkDriver):
                                 namespaces=self.nsmap,
                             ),
                         ),
-                        "local_as": as_number(local_as),
+                        # Note: ignoring any group level authentication key here
                         "authentication_key": self._find_txt(
                             bgp_neighbor,
                             "configure_ns:authentication-key",
                             namespaces=self.nsmap,
                         ),
-                        "nhs": nhs,
+                        "nhs": bool(_next_hop_self),
                         "route_reflector_client": route_reflector,
                     }
                     if neighbor != "" and peer == neighbor:
                         break
 
-            def _get_bgp_group_data(bgp_groups_list):
+            def _get_bgp_group_data(bgp_groups_list,local_as_number,g_cluster_id,g_client_reflect):
                 for bgp_group in bgp_groups_list:
                     group_name = self._find_txt(
                         bgp_group, "configure_ns:group-name", namespaces=self.nsmap
                     )
                     if group != "" and group != group_name:
                         continue
-
-                    type_ = self._find_txt(
-                        bgp_group, "configure_ns:type", namespaces=self.nsmap
-                    )
 
                     remove_private = (
                         True
@@ -2785,58 +2785,39 @@ class NokiaSROSDriver(NetworkDriver):
                         == "true"
                         else False
                     )
-                    multipath = (
-                        True
-                        if self._find_txt(
-                            bgp_group,
-                            "configure_ns:multipath-eligible",
-                            namespaces=self.nsmap,
-                        )
-                        == "true"
-                        else False
+                    type_ = self._find_txt(
+                        bgp_group, "configure_ns:type", namespaces=self.nsmap
                     )
-
                     explicit_local_as = self._find_txt(
                         bgp_group,
                         "configure_ns:local-as/configure_ns:as-number",
                         namespaces=self.nsmap,
                     )
-                    if explicit_local_as:
-                        local_as = explicit_local_as
-                    else:
-                        local_as = global_as
+                    local_as = int(explicit_local_as or local_as_number)
 
                     explicit_peer_as = self._find_txt(
                         bgp_group, "configure_ns:peer-as", namespaces=self.nsmap
                     )
                     if explicit_peer_as:
-                        peer_as = explicit_peer_as
-                    elif type_ == "internal" and not explicit_peer_as:
-                        peer_as = global_as
-                    elif type_ == "internal" and explicit_local_as:
-                        peer_as = explicit_local_as
+                      peer_as = int(explicit_peer_as)
+                      type_ = "internal" if peer_as==local_as else "external"
+                    elif type_=="internal":
+                      peer_as = local_as # Implicitly configured
                     else:
-                        peer_as = 0
+                      peer_as = 0 # Not configured, type_ may be 'no-type'
 
-                    nhs = (
-                        True
-                        if self._find_txt(
-                            bgp_group, "configure_ns:next-hop-self", namespaces=self.nsmap
-                        )
-                        == "true"
-                        else False
-                    )
-                    cluster_id = self._find_txt(
+                    xbgp = "ibgp" if type_=="internal" else "ebgp"
+                    max_path = self._find_txt(
                         bgp_group,
-                        "configure_ns:cluster/configure_ns:cluster-id",
+                        f"../configure_ns:multipath/configure_ns:{xbgp}",
                         namespaces=self.nsmap,
                     )
-                    client_reflect = self._find_txt(
-                        bgp_group, "configure_ns:client-reflect", namespaces=self.nsmap
-                    )
-                    route_reflector = False
-                    if cluster_id and client_reflect == "true":
-                        route_reflector = True
+                    multipath = bool( peer_as and max_path and int(max_path)>1 )
+
+                    _nhs = self._find_txt(bgp_group, "configure_ns:next-hop-self", namespaces=self.nsmap)
+                    # Can only set client_reflect to 'false' at group level
+                    _cluster_id,_client_reflect = _route_reflect(bgp_group)
+
                     apply_groups_list = []
                     for apply_group in bgp_group.xpath(
                         "configure_ns:apply-groups", namespaces=self.nsmap
@@ -2844,12 +2825,14 @@ class NokiaSROSDriver(NetworkDriver):
                         apply_groups_list.append(apply_group)
 
                     bgp_groups[group_name] = {
-                        "apply_groups": apply_groups_list,
+                        "type": type_,
                         "description": self._find_txt(
                             bgp_group, "configure_ns:description", namespaces=self.nsmap
                         ),
+                        "apply_groups": apply_groups_list,
                         "local_as": as_number(local_as),
-                        "type": type_,
+                        "remote_as": as_number(peer_as),
+                        "remove_private_as": remove_private,
                         "import_policy": _get_policies(
                             bgp_group.xpath(
                                 "configure_ns:import/configure_ns:policy",
@@ -2878,11 +2861,10 @@ class NokiaSROSDriver(NetworkDriver):
                             ),
                             default=-1,
                         ),
-                        "remote_as": as_number(peer_as),
-                        "remove_private_as": remove_private,
                         "prefix_limit": _build_prefix_limit(bgp_group),
-                        "_nhs": nhs,
-                        "_route_reflector_client": route_reflector,
+                        "_nhs": bool(_nhs != "false"),
+                        "_cluster_id": g_cluster_id or bool(_cluster_id),
+                        "_client_reflect": g_client_reflect and _client_reflect=="",
                         "neighbors": {},
                     }
                     if group != "" and group == group_name:
@@ -2894,77 +2876,57 @@ class NokiaSROSDriver(NetworkDriver):
                     with_defaults="report-all",
                 ).data_xml
             )
+            # print( to_xml(bgp_running_config, pretty_print=True) )
 
             bgp_group_neighbors = {}
             bgp_groups = {}
+            global_as = self._find_txt(
+                bgp_running_config,
+                "configure_ns:configure/configure_ns:router/configure_ns:autonomous-system",
+                namespaces=self.nsmap,
+            )
 
-            for bgp_neighbor_router in bgp_running_config.xpath(
+            for router in bgp_running_config.xpath(
                 "configure_ns:configure/configure_ns:router/configure_ns:bgp",
                 namespaces=self.nsmap,
             ):
-                global_as = self._find_txt(
-                    bgp_running_config,
-                    "configure_ns:configure/configure_ns:router/configure_ns:autonomous-system",
-                    namespaces=self.nsmap,
+                _cluster_id,_client_reflect = _route_reflect(router)
+                _get_bgp_group_data(
+                    router.xpath("configure_ns:group", namespaces=self.nsmap),
+                    local_as_number=int(global_as),
+                    g_cluster_id=_cluster_id,g_client_reflect=_client_reflect
                 )
                 _get_bgp_neighbor_group(
-                    bgp_neighbor_router.xpath(
-                        "configure_ns:neighbor", namespaces=self.nsmap
-                    ),
+                    router.xpath("configure_ns:neighbor", namespaces=self.nsmap),
                     global_as,
                 )
 
-            for bgp_neighbor_vprn in bgp_running_config.xpath(
+            for vprn in bgp_running_config.xpath(
                 "configure_ns:configure/configure_ns:service/configure_ns:vprn/configure_ns:bgp",
                 namespaces=self.nsmap,
             ):
-                global_as = self._find_txt(
-                    bgp_running_config,
-                    "configure_ns:configure/configure_ns:service/configure_ns:vprn/configure_ns:autonomous-system",
+                vprn_as = self._find_txt(
+                    vprn,"../configure_ns:autonomous-system",
                     namespaces=self.nsmap,
                 )
-                _get_bgp_neighbor_group(bgp_neighbor_vprn.xpath("neighbor"), global_as)
-
-            if neighbor and not group:
-                logging.error("Specify a group where to look for given neighbor")
-                neighbor = ""
-                return bgp_config
-
-            for bgp_group_router in bgp_running_config.xpath(
-                "configure_ns:configure/configure_ns:router/configure_ns:bgp",
-                namespaces=self.nsmap,
-            ):
+                _cluster_id,_client_reflect = _route_reflect(vprn)
                 _get_bgp_group_data(
-                    bgp_group_router.xpath("configure_ns:group", namespaces=self.nsmap)
+                    vprn.xpath("configure_ns:group", namespaces=self.nsmap),
+                    local_as_number=int(vprn_as),
+                    g_cluster_id=_cluster_id,g_client_reflect=_client_reflect
                 )
-
-            for bgp_group_vprn in bgp_running_config.xpath(
-                "configure_ns:configure/configure_ns:service/configure_ns:vprn/configure_ns:bgp",
-                namespaces=self.nsmap,
-            ):
-                _get_bgp_group_data(
-                    bgp_group_vprn.xpath("configure_ns:group", namespaces=self.nsmap)
+                _get_bgp_neighbor_group(
+                    vprn.xpath("configure_ns:neighbor",namespaces=self.nsmap),
+                    vprn_as,
                 )
 
             # Assemble groups and neighbors
             for grp_name, grp_data in bgp_groups.items():
                 neighbors = bgp_group_neighbors.get(grp_name, {})
 
-                # Update values from group level
-                for n_data in neighbors.values():
-                    # Update NHS from group level
-                    if not n_data.get("nhs"):
-                        n_data["nhs"] = grp_data.get("_nhs")
-                    # Update remote-as to local-as when group is internal
-                    if grp_data.get("type") == "internal":
-                        n_data["remote_as"] = n_data.get("local_as")
-                    # Update route_reflector_client from group_level
-                    if not n_data.get("route_reflector_client"):
-                        n_data["route_reflector_client"] = grp_data.get(
-                            "_route_reflector_client"
-                        )
-                grp_data.pop("_nhs")  # remove temporary key
-                grp_data.pop("_route_reflector_client")  # remove temporary key
+                grp_data.pop("_nhs")  # remove temporary keys
+                grp_data.pop("_cluster_id")
+                grp_data.pop("_client_reflect")
 
                 grp_data["neighbors"] = neighbors  # Add updated neighbors to group
 
@@ -2988,6 +2950,7 @@ class NokiaSROSDriver(NetworkDriver):
                 }
 
             return bgp_config
+
         except Exception as e:
             print("Error in method get bgp config : {}".format(e))
             log.error("Error in method get bgp config : %s" % traceback.format_exc())
@@ -3230,11 +3193,11 @@ class NokiaSROSDriver(NetworkDriver):
             # get the output of each power-module using MD-CLI
             buff = self._perform_cli_commands(
                 [
-                    "environment more false",
-                    "show chassis power-management utilization detail",
+                    "/show chassis power-management utilization detail",
                     # JvB: on VSR this is 'power-supply'
                 ],
                 True,
+                no_more=True
             )
             total_power_modules = 0
             output = 0.0
@@ -3242,8 +3205,8 @@ class NokiaSROSDriver(NetworkDriver):
                 if "Power Module" in item:
                     total_power_modules = total_power_modules + 1
                 if "Current Util." in item:
-                    row = item.strip()
-                    watts = re.match("^.*:\s*(\d+[.]\d+) Watts.*$", item)
+                    item.strip()
+                    watts = re.match(r"^.*:\s*(\d+[.]\d+) Watts.*$", item)
                     if watts:
                         output = float(watts.groups()[0])
 
@@ -3375,15 +3338,12 @@ class NokiaSROSDriver(NetworkDriver):
             ipv6_neighbor_list = []
 
             for name in name_list:
-                cmd = ["environment more false", f"show router {name} neighbor"]
-                buff = self._perform_cli_commands(cmd, True)
-                ipv6_address_regex = re.compile(
-                    "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
-                )
+                cmd = [f"/show router {name} neighbor"]
+                buff = self._perform_cli_commands(cmd, True, no_more=True)
                 prev_row = ""
                 ip_address = ""
                 for item in buff.split("\n"):
-                    if ipv6_address_regex.search(item) or prev_row:
+                    if self.ipv6_address_re.search(item) or prev_row:
                         row = item.strip()
                         prev_row = row
                         row_list = row.split()
@@ -3455,7 +3415,7 @@ class NokiaSROSDriver(NetworkDriver):
                 d6=str(count),
                 d7=vrf,
             )
-            buff = self._perform_cli_commands(["environment more false", command], True)
+            buff = self._perform_cli_commands([command], True, no_more=True)
             for item in buff.split("\n"):
                 if "No route to destination" in item:
                     value = "unknown host " + destination
@@ -3532,11 +3492,10 @@ class NokiaSROSDriver(NetworkDriver):
                 d1=destination, d2=str(timeout), d3=str(ttl), d4=source, d5=vrf,
             )
             command = [
-                "environment more false",
-                "environment progress-indicator admin-state disable",
+                "/environment progress-indicator admin-state disable",
                 cmd,
             ]
-            buff = self._perform_cli_commands(command, True)
+            buff = self._perform_cli_commands(command, True, no_more=True)
             for item in buff.split("\n"):
                 if "* * *" in item:
                     value = "unknown host " + destination
@@ -3581,20 +3540,21 @@ class NokiaSROSDriver(NetworkDriver):
             print("Error in method traceroute : {}".format(e))
             log.error("Error in method traceroute : %s" % traceback.format_exc())
 
-    def cli(self, commands):
+    def cli(self, commands, encoding="text"):
         """
         Will execute a list of commands and return the output in a dictionary format.
         """
+        if encoding not in ("text",):
+            raise NotImplementedError("%s is not a supported encoding" % encoding)
         try:
             cli_output = {}
             for cmd in commands:
                 buff = self._perform_cli_commands([cmd], True)
                 new_buff = ""
-                cmd_line_pattern = re.compile("\*?(.*?)(>.*)*#\s")
                 for item in buff.split("\n"):
                     if "[]" in item:
                         continue
-                    elif cmd_line_pattern.search(item):
+                    elif self.cmd_line_pattern_re.search(item):
                         continue
                     else:
                         row = item.strip()

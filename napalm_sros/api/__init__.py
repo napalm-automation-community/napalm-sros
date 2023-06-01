@@ -16,5 +16,6 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from .get_bgp_neighbors import get_bgp_neighbors
-from .get_bgp_neighbors_detail import get_bgp_neighbors_detail
+from .get_bgp_neighbors import get_bgp_neighbors # noqa
+from .get_bgp_neighbors_detail import get_bgp_neighbors_detail # noqa
+
