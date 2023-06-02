@@ -49,6 +49,7 @@ class PatchedNokiaSROSDriver(sros.NokiaSROSDriver):
         self.ssh_channel = FakeSSHConnectionChannel()
         self.conn_ssh = FakeSSHConnection()
         self.manager = FakeManager()
+        self.R19 = False
 
     def is_alive(self):
         return {"is_alive": True}
