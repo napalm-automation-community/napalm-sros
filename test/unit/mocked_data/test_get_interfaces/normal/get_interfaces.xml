@@ -37,7 +37,7 @@
             <interface>
                 <interface-name>system</interface-name>
                 <oper-ip-mtu>1500</oper-ip-mtu>
-                <if-oper-status>up</if-oper-status>
+                <oper-state>up</oper-state>
                 <last-oper-change>2020-04-13T15:53:27.0Z</last-oper-change>
             </interface>
         </router>
