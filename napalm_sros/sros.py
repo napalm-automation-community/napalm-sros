@@ -132,6 +132,10 @@ class NokiaSROSDriver(NetworkDriver):
                     hostkey_verify=False,
                     timeout=self.timeout,
                 )
+            revision = re.compile( ".*&revision=(.*).*" )
+            self.state_revisions = [ revision.match(i).groups()[0] for i in self.conn.server_capabilities if "nokia-state" in i ]
+            log.info( self.state_revisions )
+            self.R19 = '2016-07-06' in self.state_revisions # Older SR OS release e.g. '2022-10-19' or '2016-07-06'
         except ConnectionException as ce:
             print("Error in opening netconf connection : {}".format(ce))
             log.error(
@@ -641,7 +645,7 @@ class NokiaSROSDriver(NetworkDriver):
             interfaces = {}
             result = to_ele(
                 self.conn.get(
-                    filter=GET_INTERFACES["_"], with_defaults="report-all"
+                    filter=GET_INTERFACES(R19=self.R19), with_defaults="report-all"
                 ).data_xml
             )
             # get physical interfaces (ports) information
@@ -787,14 +791,10 @@ class NokiaSROSDriver(NetworkDriver):
                         )
                 ifd["speed"] = if_speed
 
-                ifd["is_up"] = (
-                    True
-                    if self._find_txt(
-                        if_state, "state_ns:if-oper-status", namespaces=self.nsmap
-                    )
-                    == "up"
-                    else False
-                )
+                ifd["is_up"] = self._find_txt(
+                        if_state, "state_ns:if-oper-status" if self.R19 else "state_ns:oper-state", 
+                        namespaces=self.nsmap
+                    ) == "up"
 
                 flap_time = self._find_txt(
                     if_state, "state_ns:last-oper-change", namespaces=self.nsmap

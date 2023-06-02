@@ -70,7 +70,7 @@ NEIGHBOR_STATS = """
 """
 
 GET_BGP_NEIGHBORS = """
-    <filter>
+    <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
             <router>
             <router-name/>
