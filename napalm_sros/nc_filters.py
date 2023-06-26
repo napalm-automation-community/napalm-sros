@@ -34,8 +34,8 @@ GET_FACTS = {
 }
 
 
-GET_INTERFACES = {
-    "_": """
+def GET_INTERFACES(R19):
+  return f"""
     <filter xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
         <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
             <port>
@@ -49,7 +49,7 @@ GET_INTERFACES = {
             <router>
                 <interface>
                     <oper-ip-mtu />
-                    <if-oper-status />
+                    { '<if-oper-status/>' if R19 else '<oper-state/>' }
                     <last-oper-change/>
                 </interface>
             </router>
@@ -80,7 +80,6 @@ GET_INTERFACES = {
         </configure>
     </filter>
     """
-}
 
 GET_INTERFACES_COUNTERS = {
     "_": """
