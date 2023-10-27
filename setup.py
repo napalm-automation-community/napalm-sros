@@ -10,6 +10,7 @@ setup(
     name="napalm-sros",
     version="1.0.1",
     packages=find_packages(),
+    package_data={"napalm_sros.templates": ["*.js"], "napalm_sros.utils.textfsm_templates": ["*.tpl"]},
     author="Nokia",
     author_email="",
     description="Network Automation and Programmability Abstraction Layer with Multivendor support",
