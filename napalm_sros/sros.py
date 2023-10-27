@@ -422,7 +422,7 @@ class NokiaSROSDriver(NetworkDriver):
                 if not first_compare and "compare" in item:
                     first_compare = True
                     continue
-                elif "(ex)[]" in item:
+                elif re.search(r'\(ex\)\[\/?\]', item):
                     continue
                 elif "/environment more false" in item:
                     continue
