@@ -24,7 +24,6 @@ Napalm driver for SROS.
 import json
 import time
 import re
-import logging
 import datetime
 import traceback
 import xmltodict
@@ -41,6 +40,8 @@ from napalm.base.exceptions import (
     SessionLockedException,
     MergeConfigException,
     ReplaceConfigException,
+    CommitError,
+    CommandErrorException,
 )
 from napalm.base.helpers import convert, ip, as_number
 import napalm.base.constants as C
@@ -295,14 +296,14 @@ class NokiaSROSDriver(NetworkDriver):
                     value = xpath_result
             else:
                 if xpath_applied == "":
-                    logging.error(
+                    log.error(
                         "Unable to find the specified-text-element/XML path: %s in  \
                             the XML tree provided. Total Items in XML tree: %d "
                         % (path, xpath_length)
                     )
         except Exception as e:  # in case of any exception, returns default
             print("Error while finding text in xml: {}".format(e))
-            logging.error("Error while finding text in xml: %s" % traceback.format_exc())
+            log.error("Error while finding text in xml: %s" % traceback.format_exc())
             value = default
         return str(value)
 
@@ -323,7 +324,7 @@ class NokiaSROSDriver(NetworkDriver):
             return is_alive_dict
         except Exception as e:  # in case of any exception, returns default
             print("Error occurred in is_alive method: {}".format(e))
-            logging.error("Error occurred in is_alive: %s" % traceback.format_exc())
+            log.error("Error occurred in is_alive: %s" % traceback.format_exc())
 
     def discard_config(self):
         """
@@ -345,14 +346,13 @@ class NokiaSROSDriver(NetworkDriver):
             # If error while performing commit, return the error
             error = ""
             for item in buff.split("\n"):
-                if self.cmd_line_pattern_re.search(item):
-                    continue
                 if any(match.search(item) for match in self.terminal_stderr_re):
                     row = item.strip()
                     row_list = row.split(": ")
                     error += row_list[2]
             if error:
-                print("Error while commit: ", error)
+                log.error(f"Error during commit: {error}")
+                raise CommitError(error)
         elif self.fmt == "xml":
             self.conn.commit()
             if not self.lock_disable and not self.session_config_lock:
@@ -375,8 +375,8 @@ class NokiaSROSDriver(NetworkDriver):
                     row_list = row.split(": ")
                     error += row_list[2]
                 if error:
-                    print("Error while rollback: ", error)
-                    break
+                    log.error(f"Error during rollback: {error}")
+                    raise CommandErrorException(error)
 
     def compare_config(self):
         """
@@ -551,6 +551,7 @@ class NokiaSROSDriver(NetworkDriver):
             if buff is not None:
                 for item in buff.split("\n"):
                     if any(match.search(item) for match in self.terminal_stderr_re):
+                        log.error( f"Replace issue: {item}" )
                         raise ReplaceConfigException("Replace issue: %s", item)
             else:
                 raise ReplaceConfigException("Timeout during load_replace_candidate")

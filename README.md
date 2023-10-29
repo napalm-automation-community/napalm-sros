@@ -18,13 +18,13 @@ NAPALM integration is validated with a minimum of Nokia Service Router Operating
 6) For testing, please refer to [Test Document](https://github.com/napalm-automation-community/napalm-sros/blob/master/README_TEST.md)
 
 #### **Components Version**
-1) Python - 3.6
+1) Python - 3.8 or higher
 2) ncclient >= 0.6.13
 3) paramiko >= 2.11.0
-4) NAPALM >= 3.4.1
+4) NAPALM >= 4.0.0
 
 ##### **Note**
-This version of the driver leverages Nokia’s defined YANG models for configuration and state trees for the SROS platform. While SROS also support limited configuration and state retrieval using openconfig standard models, the NAPALM driver does not support configuration or state retrieval of openconfig data models.
+This version of the driver leverages Nokia’s defined YANG models for configuration and state trees for the SROS platform. While SROS also supports limited configuration and state retrieval using openconfig standard models, the NAPALM driver does not support configuration or state retrieval of openconfig data models.
 
 #### License
 This project is licensed under the Apache-2.0 license - see the [LICENSE](LICENSE) file.
