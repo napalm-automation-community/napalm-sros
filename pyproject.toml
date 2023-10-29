@@ -8,6 +8,7 @@ version="1.0.1"
 description="Network Automation and Programmability Abstraction Layer driver for Nokia SR OS"
 readme = "README.md"
 requires-python = ">=3.7"
+dynamic = [ "dependencies" ]
 classifiers = [
     "Topic :: System :: Networking",
     "Programming Language :: Python :: 3",
