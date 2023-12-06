@@ -57,11 +57,11 @@ from napalm_sros.nc_filters import GET_ARP_TABLE,GET_BGP_CONFIG,GET_ENVIRONMENT,
      GET_IPV6_NEIGHBORS_TABLE,GET_LLDP_NEIGHBORS,GET_LLDP_NEIGHBORS_DETAIL, \
      GET_NETWORK_INSTANCES,GET_NTP_PEERS,GET_NTP_SERVERS,GET_OPTICS, \
      GET_PROBES_CONFIG,GET_ROUTE_TO,GET_SNMP_INFORMATION,GET_USERS
-from napalm_sros.utils.utils import init_logging
 
 from .api import get_bgp_neighbors, get_bgp_neighbors_detail
+import logging
 
-log = init_logging()
+log = logging.getLogger(__file__)
 
 class NokiaSROSDriver(NetworkDriver):
     """Napalm driver for Skeleton."""
