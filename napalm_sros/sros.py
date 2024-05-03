@@ -1135,7 +1135,7 @@ class NokiaSROSDriver(NetworkDriver):
                 cmd_candidate = ["edit-config read-only", "info | no-more", "quit-config"]
 
                 # helper method
-                def _update_buff(buff):
+                def _update_buff(buff, skip_persistent_indices=True):
                     if "@nokia.com" in buff:
                         buff = buff.split("@nokia.com.")
                         updated_buff = [buff[1]]
@@ -1157,7 +1157,7 @@ class NokiaSROSDriver(NetworkDriver):
                             continue
                         elif self.cmd_line_pattern_re.search(item) or not row:
                             continue
-                        elif "persistent-indices" in item:
+                        elif "persistent-indices" in item and skip_persistent_indices:
                             break
                         else:
                             if "configure" in row and len(row) == 11:
@@ -1170,23 +1170,23 @@ class NokiaSROSDriver(NetworkDriver):
                     return new_buff[: new_buff.rfind("\n")]
 
                 if retrieve == "running":
-                    configuration["running"] = _update_buff(buff_running)
                     buff_running = self._perform_cli_commands(cmd_running, True)
+                    configuration["running"] = _update_buff(buff_running, skip_persistent_indices=True)
                     return configuration
                 elif retrieve == "startup":
-                    configuration["startup"] = _update_buff(buff_running)
                     buff_running = self._perform_cli_commands(cmd_running, True)
+                    configuration["startup"] = _update_buff(buff_running, skip_persistent_indices=True)
                     return configuration
                 elif retrieve == "candidate":
                     buff_candidate = self._perform_cli_commands(cmd_candidate, True)
-                    configuration["candidate"] = _update_buff(buff_candidate)
+                    configuration["candidate"] = _update_buff(buff_candidate, skip_persistent_indices=True)
                     return configuration
                 elif retrieve == "all":
                     buff_running = self._perform_cli_commands(cmd_running, True)
                     buff_candidate = self._perform_cli_commands(cmd_candidate, True)
-                    configuration["running"] = _update_buff(buff_running)
-                    configuration["startup"] = _update_buff(buff_running)
-                    configuration["candidate"] = _update_buff(buff_candidate)
+                    configuration["running"] = _update_buff(buff_running, skip_persistent_indices=True)
+                    configuration["startup"] = _update_buff(buff_running, skip_persistent_indices=True)
+                    configuration["candidate"] = _update_buff(buff_candidate, skip_persistent_indices=True)
                     return configuration
 
             # returning the config in xml format
