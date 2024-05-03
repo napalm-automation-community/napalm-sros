@@ -1131,7 +1131,7 @@ class NokiaSROSDriver(NetworkDriver):
             if self.sros_get_format == "cli" and (sanitized is True or sanitized is False):
                 # Getting output in MD-CLI format
                 # retrieving config using md-cli
-                cmd_running = "admin show configuration | no-more"
+                cmd_running = ["admin show configuration | no-more"]
                 cmd_candidate = ["edit-config read-only", "info | no-more", "quit-config"]
 
                 # helper method
@@ -1146,7 +1146,7 @@ class NokiaSROSDriver(NetworkDriver):
                         cmd_candidate[0],
                         cmd_candidate[1],
                         cmd_candidate[2],
-                        cmd_running,
+                        cmd_running[0],
                     ]
                     count = 1
                     for item in updated_buff[0].split("\n"):
@@ -1170,19 +1170,19 @@ class NokiaSROSDriver(NetworkDriver):
                     return new_buff[: new_buff.rfind("\n")]
 
                 if retrieve == "running":
-                    buff_running = self._perform_cli_commands([cmd_running], True)
                     configuration["running"] = _update_buff(buff_running)
+                    buff_running = self._perform_cli_commands(cmd_running, True)
                     return configuration
                 elif retrieve == "startup":
-                    buff_running = self._perform_cli_commands([cmd_running], True)
                     configuration["startup"] = _update_buff(buff_running)
+                    buff_running = self._perform_cli_commands(cmd_running, True)
                     return configuration
                 elif retrieve == "candidate":
                     buff_candidate = self._perform_cli_commands(cmd_candidate, True)
                     configuration["candidate"] = _update_buff(buff_candidate)
                     return configuration
                 elif retrieve == "all":
-                    buff_running = self._perform_cli_commands([cmd_running], True)
+                    buff_running = self._perform_cli_commands(cmd_running, True)
                     buff_candidate = self._perform_cli_commands(cmd_candidate, True)
                     configuration["running"] = _update_buff(buff_running)
                     configuration["startup"] = _update_buff(buff_running)
