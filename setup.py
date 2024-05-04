@@ -8,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="napalm-sros",
-    version="1.0.1",
+    version="1.0.2",
     packages=find_packages(),
     package_data={"napalm_sros.templates": ["*.js"], "napalm_sros.utils.textfsm_templates": ["*.tpl"]},
     author="Nokia",
@@ -17,11 +17,11 @@ setup(
     classifiers=[
         "Topic :: Utilities",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Natural Language :: English",
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: Apache Software License",
