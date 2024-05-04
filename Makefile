@@ -32,4 +32,4 @@ dist: ## This creates a ./dist directory with wheel package
 release: dist ## release to PyPi
 	python3 -m pip install --upgrade twine
 	# --repository testpypi
-	python3 -m twine upload dist/*
+	python3 -m twine upload --repository napalm-sros dist/*

@@ -60,6 +60,7 @@ class FakeNokiaSROSDevice(BaseTestDouble):
     def __init__(self):
         self.get = FakeGetMethod(self)
         self.get_config = FakeGetConfigMethod(self)
+        self.server_capabilities = []
 
     def open(self):
         pass

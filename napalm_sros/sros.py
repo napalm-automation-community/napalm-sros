@@ -1105,6 +1105,7 @@ class NokiaSROSDriver(NetworkDriver):
         retrieve="all",
         full=False,
         sanitized=False,
+        format="text",
     ):
         """
             Return the configuration of a device.
@@ -1128,7 +1129,7 @@ class NokiaSROSDriver(NetworkDriver):
         """
         try:
             configuration = {"running": "", "candidate": "", "startup": ""}
-            if self.sros_get_format == "cli" and (sanitized is True or sanitized is False):
+            if self.sros_get_format == "cli" or format == "cli":
                 # Getting output in MD-CLI format
                 # retrieving config using md-cli
                 cmd_running = "admin show configuration | no-more"
@@ -1190,7 +1191,7 @@ class NokiaSROSDriver(NetworkDriver):
                     return configuration
 
             # returning the config in xml format
-            elif self.sros_get_format == "xml" and (sanitized is True or sanitized is False):
+            elif self.sros_get_format == "xml" or format == "xml":
                 config_data_running_xml = ""
                 if retrieve == "running" or retrieve == "all":
                     config_data_running = to_ele(
