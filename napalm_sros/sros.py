@@ -106,6 +106,7 @@ class NokiaSROSDriver(NetworkDriver):
         self.port = optional_args.get("port", 830)
         self.conn_ssh = optional_args.get("ssh_conn", None)
         self.ssh_channel = optional_args.get("ssh_channel", None)
+        self.include_bof_config = optional_args.get("include_bof_config", False)
 
         # locking variables
         self.lock_disable = optional_args.get("lock_disable", False)
@@ -1132,11 +1133,14 @@ class NokiaSROSDriver(NetworkDriver):
             if self.sros_get_format == "cli" or format == "cli":
                 # Getting output in MD-CLI format
                 # retrieving config using md-cli
-                cmd_running = "admin show configuration | no-more"
+                cmd_running = ["admin show configuration | no-more"]
                 cmd_candidate = ["edit-config read-only", "info | no-more", "quit-config"]
+                if self.include_bof_config:
+                    cmd_bof_running = ["admin show configuration bof | no-more"]
+                    cmd_bof_candidate = ["edit-config bof read-only", "info | no-more", "quit-config"]
 
                 # helper method
-                def _update_buff(buff):
+                def _update_buff(buff, skip_persistent_indices=True):
                     if "@nokia.com" in buff:
                         buff = buff.split("@nokia.com.")
                         updated_buff = [buff[1]]
@@ -1147,8 +1151,14 @@ class NokiaSROSDriver(NetworkDriver):
                         cmd_candidate[0],
                         cmd_candidate[1],
                         cmd_candidate[2],
-                        cmd_running,
+                        cmd_running[0],
                     ]
+                    if self.include_bof_config:
+                        match_strings.extend([cmd_bof_running[0],
+                                              cmd_bof_candidate[0],
+                                              cmd_bof_candidate[1],
+                                              cmd_bof_candidate[2],
+                                              '[/]'])
                     count = 1
                     for item in updated_buff[0].split("\n"):
                         row = item.rstrip()
@@ -1158,10 +1168,10 @@ class NokiaSROSDriver(NetworkDriver):
                             continue
                         elif self.cmd_line_pattern_re.search(item) or not row:
                             continue
-                        elif "persistent-indices" in item:
+                        elif "persistent-indices" in item and skip_persistent_indices:
                             break
                         else:
-                            if "configure" in row and len(row) == 11:
+                            if ("configure {" in row or "bof {" in row):
                                 new_buff += row.strip() + "\n"
                                 count = count + 1
                             else:
@@ -1171,23 +1181,36 @@ class NokiaSROSDriver(NetworkDriver):
                     return new_buff[: new_buff.rfind("\n")]
 
                 if retrieve == "running":
-                    buff_running = self._perform_cli_commands([cmd_running], True)
-                    configuration["running"] = _update_buff(buff_running)
+                    buff_running = self._perform_cli_commands(cmd_running, True)
+                    configuration["running"] = _update_buff(buff_running, skip_persistent_indices=True)
+                    if self.include_bof_config:
+                        buff_bof = self._perform_cli_commands(cmd_bof_running, True)
+                        configuration["running"] += f"\n{_update_buff(buff_bof, skip_persistent_indices=False)}"
                     return configuration
                 elif retrieve == "startup":
-                    buff_running = self._perform_cli_commands([cmd_running], True)
-                    configuration["startup"] = _update_buff(buff_running)
+                    buff_running = self._perform_cli_commands(cmd_running, True)
+                    configuration["startup"] = _update_buff(buff_running, skip_persistent_indices=True)
+                    if self.include_bof_config:
+                        buff_bof = self._perform_cli_commands(cmd_bof_running, True)
+                        configuration["startup"] += f"\n{_update_buff(buff_bof, skip_persistent_indices=False)}"
                     return configuration
                 elif retrieve == "candidate":
                     buff_candidate = self._perform_cli_commands(cmd_candidate, True)
-                    configuration["candidate"] = _update_buff(buff_candidate)
+                    configuration["candidate"] = _update_buff(buff_candidate, skip_persistent_indices=True)
+                    if self.include_bof_config:
+                        buff_bof = self._perform_cli_commands(cmd_bof_candidate, True)
+                        configuration["candidate"] += f"\n{_update_buff(buff_bof, skip_persistent_indices=False)}"
                     return configuration
                 elif retrieve == "all":
-                    buff_running = self._perform_cli_commands([cmd_running], True)
+                    buff_running = self._perform_cli_commands(cmd_running, True)
                     buff_candidate = self._perform_cli_commands(cmd_candidate, True)
-                    configuration["running"] = _update_buff(buff_running)
-                    configuration["startup"] = _update_buff(buff_running)
-                    configuration["candidate"] = _update_buff(buff_candidate)
+                    configuration["running"] = _update_buff(buff_running, skip_persistent_indices=True)
+                    configuration["startup"] = _update_buff(buff_running, skip_persistent_indices=True)
+                    configuration["candidate"] = _update_buff(buff_candidate, skip_persistent_indices=True)
+                    if self.include_bof_config:
+                        buff_bof = self._perform_cli_commands(cmd_bof_running, True)
+                        configuration["running"] += f"\n{_update_buff(buff_bof, skip_persistent_indices=False)}"
+                        configuration["startup"] += f"\n{_update_buff(buff_bof, skip_persistent_indices=False)}"
                     return configuration
 
             # returning the config in xml format
