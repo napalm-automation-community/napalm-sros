@@ -58,8 +58,9 @@
    git clone https://github.com/napalm-automation-community/napalm-sros
    ``` 
    
-3) Install requirements using command `pip install -r requirements.txt` 
-4) Run a script to get the results.
+3) Install requirements using command `pip install -r requirements.txt`
+4) Install plugin: python3 setup.py install
+5) Run a script to get the results.
    ##### Usage Example
     ```
     from napalm import get_network_driver
